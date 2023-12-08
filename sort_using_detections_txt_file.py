@@ -2,7 +2,7 @@ import sys
 sys.path.append('/remote_home/Thesis')
 
 import argparse
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
 from utils.coco_dataset_manager import *
 import xml.etree.ElementTree as ET
@@ -32,7 +32,7 @@ matplotlib.use('Agg')
 
 # Define the path for the parsed dictionary of objects found in frame
 #dict_path = '/remote_home/Thesis/Sort/parsed_data_dict.pkl'
-dict_path = 'parsed_data_dict.pkl'
+dict_path = 'mot-17-13-det.txt'
 
 # Define a function to generate random colors
 def generate_random_colors(num_colors):
@@ -46,16 +46,32 @@ def generate_random_colors(num_colors):
     return colors
 
 # Load data from a pickle file
-with open(dict_path, 'rb') as pickle_file:
-    loaded_frames_detections = pickle.load(pickle_file)
 
-colors = generate_random_colors(len(loaded_frames_detections))  # Generate random colors based on the number of frames
+txt_lines = ([], [])
+
+idx = -1
+max_frame = -1
+
+with open(dict_path, 'r') as txt:
+    for line in txt:
+        splt = line.split(',')
+
+        if (int(splt[0]) > int(max_frame)):
+            txt_lines[0].append(splt[0])
+            max_frame = splt[0]
+            txt_lines[1].append([])
+            idx+=1
+
+        txt_lines[1][idx].append(splt[2:6])
+
+
+colors = generate_random_colors(len(txt_lines))  # Generate random colors based on the number of frames
 
 # Initialize SORT tracker
 mot_tracker = sort.Sort()
 
 # Initialize YOLO model
-model = YOLO('yolov8n.pt')
+#model = YOLO('yolov8n.pt')
 
 # Path to the image folder
 #img_pth = r"/home/taylordmark/MOT17/train/MOT17-13-DPM/img1"
@@ -84,42 +100,41 @@ with open('detect_and_sort_results.csv', mode='w', newline='') as csv_file:
     image_paths = sorted(image_folder.iterdir(), key=lambda x: int(os.path.splitext(x.name)[0]))
 
 
+    for i in range(len(txt_lines[0])):
 
-    for frame_num, frame_data in loaded_frames_detections.items():
+
+        frame_num = txt_lines[0][i]
+        frame_data = txt_lines[1][i]
         image_path = next((p for p in image_paths if str(frame_num) == os.path.splitext(p.name.lstrip('0'))[0]), None)
 
         if image_path is not None:
             image = cv2.imread(str(image_path))
-            boxes = frame_data['boxes']
-            probabilities = frame_data['probabilities']
-            classes = frame_data['classes']
+            boxes = frame_data
 
             detections = []
-            for box, confidence, class_index in zip(boxes, probabilities, classes):
-                b = [box[0], box[1], box[0]+box[2], box[1]+box[3]] #xywh to xyxy, as SORT wants xyxy format
-                c = confidence
+            for box in boxes:
+                b = [float(box[0]), 
+                     float(box[1]), 
+                     float(box[0])+float(box[2]), 
+                     float(box[1])+float(box[3])] #xywh to xyxy, as SORT wants xyxy format
                 #b.append(c)
 
                 detections.append(b)
 
-            #print(detections)
-
             # Use SORT to update object tracking
             track_bbs_ids = mot_tracker.update(detections)
 
-            print(track_bbs_ids)
-
-            for (xmin, ymin, xmax, ymax, obj_id), confidence, class_index in zip(track_bbs_ids, probabilities, classes):
+            for (xmin, ymin, xmax, ymax, obj_id) in track_bbs_ids:
                 
                 
                 xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
-                class_name = f"Class {class_index}"  # Adjust this part according to your class mapping
+                #class_name = f"Class {class_index}"  # Adjust this part according to your class mapping
 
                 #print(confidence)
-                object_id_and_class = f"{class_name}: {np.max(confidence):.3f}"
+                #object_id_and_class = f"{class_name}: {np.max(confidence):.3f}"
                 color = colors[int(frame_num)] if int(frame_num) < len(colors) else (0, 0, 0)
                 cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 2)
-                cv2.putText(image, object_id_and_class, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                cv2.putText(image, "detection", (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                 # Write the tracking result to the CSV file
                 writer.writerow({
@@ -129,8 +144,8 @@ with open('detect_and_sort_results.csv', mode='w', newline='') as csv_file:
                     'Y': ymin,
                     'Width': xmax - xmin,
                     'Height': ymax - ymin,
-                    'Confidence': float(np.max(confidence)),
-                    'Class': class_index
+                    # 'Confidence': float(np.max(confidence)),
+                    # 'Class': class_index
                 })
 
             # Write the frame with bounding boxes to the output video
