@@ -1,0 +1,11 @@
+scipy==1.9.3
+motmetrics==1.4.0
+matplotlib==3.3.4
+scikit-learn==0.20.4
+opencv-python==4.8.1.78
+ultralytics==8.0.223
+keras_cv==0.6.4
+scikit_image==0.21.0
+filterpy==1.4.5
+
+tensorflow
