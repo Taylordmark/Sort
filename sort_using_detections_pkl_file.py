@@ -24,14 +24,13 @@ import pickle
 import random
 import sort
 import os
-import sort
 from pathlib import Path
 import cv2
 from ultralytics import YOLO
 import numpy as np
 import random
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 
 
 # Define the path for the parsed dictionary of objects found in frame
@@ -57,11 +56,8 @@ colors = generate_random_colors(len(loaded_frames_detections))  # Generate rando
 # Initialize SORT tracker
 mot_tracker = sort.Sort()
 
-# Initialize YOLO model
-model = YOLO('yolov8n.pt')
-
 # Path to the image folder
-image_folder = Path(r"/home/taylordmark/MOT17/train/MOT17-13-DPM/img1")
+image_folder = Path(r"/remote_home/Thesis/BDD_Files/traffic")
 
 # Get the dimensions of the first image in the folder
 first_image = next(image_folder.iterdir())
@@ -76,7 +72,7 @@ fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter(output_video_path, fourcc, 30.0, (width, height))
 
 # Create and open a CSV file for writing tracking results
-with open('detect_and_sort_results.csv', mode='w', newline='') as csv_file:
+with open('detect_and_sort_results_2.csv', mode='w', newline='') as csv_file:
     fieldnames = ['FrameNumber', 'ObjectID', 'X', 'Y', 'Width', 'Height', 'Confidence', 'Class']
     writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
     writer.writeheader()
