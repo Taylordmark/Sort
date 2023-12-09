@@ -1,7 +1,7 @@
 from typing import Any
 
 import numpy as np
-from keras_cv.backend import ops
+from tensorflow import ops
 
 class_ids = ["background", "person", "bicycle", "car", "motorcycle",
     "airplane", "bus", "train", "truck", "boat", "traffic light", "fire hydrant",
