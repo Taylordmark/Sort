@@ -22,7 +22,7 @@ def generate_random_colors(num_colors):
     return colors
 
 
-# Read the raw text from the file
+# Read the raw classes text from the file
 with open(r'/home/taylordmark/Thesis/Sort/object_dict.txt', 'r') as file:
     raw_text = file.read()
 

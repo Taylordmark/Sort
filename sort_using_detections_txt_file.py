@@ -134,7 +134,7 @@ with open('detect_and_sort_results.csv', mode='w', newline='') as csv_file:
                 #object_id_and_class = f"{class_name}: {np.max(confidence):.3f}"
                 color = colors[int(frame_num)] if int(frame_num) < len(colors) else (0, 0, 0)
                 cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 2)
-                cv2.putText(image, "detection", (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                cv2.putText(image, str(obj_id), (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                 # Write the tracking result to the CSV file
                 writer.writerow({

@@ -23,15 +23,10 @@ import cv2
 from ultralytics import YOLO
 import numpy as np
 import random
-<<<<<<< HEAD
-#import matplotlib
-#matplotlib.use('Agg')
-=======
 import matplotlib
 
 import csv
 matplotlib.use('Agg')
->>>>>>> 97444774f7edf79ab41f4f6ac0b1cfd5a98451c6
 
 
 # Define the path for the parsed dictionary of objects found in frame
@@ -59,13 +54,9 @@ colors = generate_random_colors(len(loaded_frames_detections))  # Generate rando
 mot_tracker = sort.Sort()
 
 # Path to the image folder
-<<<<<<< HEAD
-image_folder = Path(r"/remote_home/Thesis/BDD_Files/traffic")
-=======
 #img_pth = r"/home/taylordmark/MOT17/train/MOT17-13-DPM/img1"
 img_pth = r"C:\Users\nloftus\Documents\Datasets\MOT17\MOT17\train\MOT17-13-DPM\img1"
 image_folder = Path(img_pth)
->>>>>>> 97444774f7edf79ab41f4f6ac0b1cfd5a98451c6
 
 # Get the dimensions of the first image in the folder
 first_image = next(image_folder.iterdir())
