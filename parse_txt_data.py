@@ -1,7 +1,7 @@
 import json
 import ast
 
-file_path = '/remote_home/Thesis/Sort/frames_output.txt'
+file_path = '/remote_home/Thesis/Sort/frames_output copy.txt'
 
 
 def read_valuestring(valstring):
