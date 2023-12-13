@@ -1,77 +1,177 @@
 import numpy as np
+
 import random
 from scipy.stats import beta
-from scipy.stats import ks_2samp
-
-import numpy as np
 import pickle
 from sort import Sort
 from scipy.stats import beta, ks_2samp
+import random
+import matplotlib.pyplot as plt
+import os
 
-# Other functions and definitions...
+from A_probability_from_pdfs import get_prob_from_dist, global_parameterize
 
-def predict_class_for_object(global_data, class_probabilities, sorted_data):
-    predicted_classes = []
-    object_history = np.full((1, num_classes), 1)
+def generate_plot(num_classes, object_type_distributions):
+    # Define the number of rows (i) and columns (j) for the panel
+    i, j = num_classes, num_classes
+    # Create subplots for the i x j panel
+    fig, axes = plt.subplots(i, j, figsize=(15, 10))
+    # Loop through each combination of columns and create histograms
+    for row in range(i):
+        for col in range(j):
+            # Plot the histogram
+            axes[row, col].hist(object_type_distributions[row][:, col], bins=10)  # Adjust the number of bins as needed
+            axes[row, col].set_title(f'Column {col + 1} Histogram for Object Type {row + 1}')
+            axes[row, col].set_xlabel('Values')
+            axes[row, col].set_ylabel('Frequency')
 
-    # Initialize SORT tracker
-    mot_tracker = Sort()
+            # Set the x-axis limits to match the maximum value
+            axes[row, col].set_xlim(0, max_value)
 
-    for frame, value in sorted_data.items():
-        # Get the bounding boxes and scores from the current frame
-        detections = np.array(value['boxes'])
-        scores = np.array(value['probabilities'])
-
-        # Use SORT to track the objects
-        trackers = mot_tracker.update(detections)
-
-        # Iterate through each detected object
-        for d, detection in enumerate(trackers):
-            # Extract the bounding box and score
-            bbox = detection[:4]
-            score = scores[d]
-
-            # Use the bbox and score to get the predicted class
-            # ... (your logic for class prediction based on bbox and score)
-
-            # Add data to where it was predicted to belong
-            global_data[predicted_class] = np.vstack((global_data[predicted_class], score))
-
-            # Recalculate the respective parameters
-            global_data[predicted_class] = create_distribution_parameters_list(num_classes, global_data[predicted_class])
-
-    return predicted_classes
-
-# Rest of the code...
-
+    # Display the histograms
+    plt.tight_layout()
+    plt.show()
 
 def get_class_probabilities(population_counts):
     total_population = sum(population_counts.values())
     class_probabilities = {key: value / total_population for key, value in population_counts.items()}
     return class_probabilities
 
-def get_parameters_from_list(list_of_numbers):
-    a, b, loc, scale = beta.fit(list_of_numbers)
-    parameters = [a, b, loc, scale]
-    return parameters
+def get_data_from_detections(detections):
+    xywh_boxes, probabilities, classes, names = detections.values()
+    xyxy_boxes = []
+    for b in xywh_boxes:
+        b = [b[0], b[1], b[0]+b[2], b[1]+b[3]]
+        xyxy_boxes.append(b)
+    boxes = np.array(xyxy_boxes)
+    probabilities = np.array(probabilities)
+    classes = np.array(classes)
+    
+    return boxes, probabilities, classes, names
 
-def create_distribution_parameters_list(num_classes, object_type_distributions):
-    # Create an empty list of distribution parameters
-    distribution_parameters = []
+def get_matching_box_index(boxes, bbox):
+    for i, box in enumerate(boxes):
+        if np.allclose(box, bbox, rtol=.1):
+            return i
+    return None
+        
+def predict_class_for_object(global_data, object_history, class_probabilities):
+    
+    # KS test all classes, features and get list of p values
+    pvals = []
+    for c in global_data:
+        pval = 1 
+        for i in range(c.shape[1]):
+            # Perform the KS test for each column
+            ks_statistic, p_value = ks_2samp(c[:, i], object_history[:, i])
+    
+            # Append the p-value to the pvals list
+            pval *= p_value
+        pvals.append(pval)
+    pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
+    
+    predicted_class = pvals.index(max(pvals))
 
-    # For each class, feature set dist parameters to fitted beta dist of associated data
-    for row in range(num_classes):
-        row_parameters = []
-        for col in range(num_classes):
-            data = object_type_distributions[row][:, col]
+    return predicted_class
 
-            # Get parameters
-            parameters = get_parameters_from_list(data)
 
-            # Store parameters in a dictionary
-            row_parameters.append(parameters)
-        distribution_parameters.append(row_parameters)    
-    return distribution_parameters
+
+
+# Define the path for the parsed dictionary of objects found in frame
+dict_path = 'C:/Users/keela/Documents/Sort/parsed_data_dict.pkl'
+
+# Define path for list of classes model trained on
+classes_path = 'C:/Users/keela/Documents/Sort/yolo-cls-traffic_only.txt'
+
+# Load data from a pickle file
+with open(dict_path, 'rb') as pickle_file:
+    loaded_frames_detections = pickle.load(pickle_file)
+
+
+# Get all classes
+with open(classes_path, 'r') as classes_file:
+    classes = classes_file.readlines()
+classes = [c.replace("\n", "") for c in classes]
+num_classes = len(classes)
+
+# Generate fake distributions for previous class instances (fix later)
+population_counts = {}
+
+for c in range(num_classes):
+    population_counts[c] = int(np.log(float((random.randint(1,10000))**5)))
+
+# Get class probabilities from population counts
+class_probabilities = get_class_probabilities(population_counts)
+
+# Initialize np arrays to track distributions for all classes
+global_data = [np.full((1, num_classes), 1)\
+                             for _ in range(num_classes)]
+
+# Initialize SORT tracker
+mot_tracker = Sort()
+
+# Initialize dict of data for each tracked object
+tracked_object_data = {}
+
+# Initialize dict of data for predicted object class
+tracked_object_classes = {}
+
+# Iterate through every detection in the dictionary
+for frame, detections in loaded_frames_detections.items():
+    boxes, probabilities, classes, names = get_data_from_detections(detections)
+    
+    
+    # Update SORT with boxes
+    trackers = mot_tracker.update(boxes)
+    
+    # If there is a tracked object
+    if len(trackers) > 0:
+        # Iterate through tracked objects
+        for o in trackers:
+            bbox = o[:4]
+            track_id = o[-1]
+            
+            # If the object is new
+            if track_id not in tracked_object_data.keys():
+                # Find which of the current bboxes match and add data to track id
+                index = get_matching_box_index(boxes, bbox)
+                # Set track data to probabilities
+                tracked_object_data[track_id] = probabilities[index]
+
+                tracked_object_data[track_id] = np.array(bbox)
+                
+            
+            # If the object has been seen before
+            else:
+                # Append probability data to the list
+                tracked_object_data[track_id] = np.vstack(np.array(probabilities[index]))
+                
+                # Predict the class of the object based on all data
+                predicted_class = \
+                    predict_class_for_object(global_data, \
+                                             tracked_object_data[track_id], \
+                                                 class_probabilities)
+                
+                # Add prediction to dictionary
+                
+            
+        #print(f"{frame}:{trackers}\n")
+    else:
+        print(f"Nothing tracked in {frame}")
+        
+    
+    
+
+
+
+
+
+
+
+
+
+
+
 
 def predict_class_for_detection(distribution_parameters, new_distribution, class_probabilities):
     """Inputs: 
@@ -98,90 +198,5 @@ def predict_class_for_detection(distribution_parameters, new_distribution, class
     prediction = pdfs.index(max(pdfs))
     return prediction
 
-def predict_class_for_object(global_data, class_probabilities):
-    # Randomly select a "true" class based on the probabilities
-    true_class = random.choices(list(class_probabilities.keys()), list(class_probabilities.values()))[0]
-    predicted_classes = []
-    object_history = np.full((1, num_classes), 1)
 
-    # For every frame generate a prediction for the object and add to data
-    for frame in range(100):
-        # Generate numbers for all list indices
-        object_features = [random.random() for _ in range(len(list(class_probabilities.keys())))]
-        # Add a little to the true class index
-        # .25 makes the probability of true class being true class about 50/50
-        object_features[true_class] += .25
-        # Make one of the other classes be mildly indicitive of the true class
-        object_features[true_class - 2] -= 0.1
-        # Normalize the values
-        features_sum = sum(object_features)
-        object_features = [x / features_sum for x in object_features]
-        # Stack object features with previous values for predicted class
-        object_features = np.array(object_features)
-        object_history = np.vstack((object_history, object_features))
-    
-        # KS test all classes, features and get list of p values
-        pvals = []
-        for clas in global_data:
-            pval = 1 
-            for i in range(clas.shape[1]):
-                # Perform the KS test for each column
-                ks_statistic, p_value = ks_2samp(clas[:, i], object_history[:, i])
-        
-                # Append the p-value to the pvals list
-                pval *= p_value
-            pvals.append(pval)
-        pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
-        
-        predicted_classes.append(pvals.index(max(pvals)))
 
-    return predicted_classes
-
-# Define the "new detection" probability distribution
-
-# Person-esque prediction
-new_detection = np.array([0.6, 0.2, 0.2, 0.0, 0.0])
-
-# Traffic light-esque prediction
-# new_detection = np.array([.0, .1, .1, .3, .5])
-
-# Bicycle-esque prediction
-# new_detection = np.array([.1, .6, .0, .2, .1])
-
-# Define class  labels
-class_dictionary = {
-    0: "person",  
-    1: "bicycle",  
-    2: "car",     
-    3: "motorcycle",  
-    4: "traffic light"}\
-
-# Define the population percentages for each class as log of estimated counts
-population_counts = {
-    0: np.log(501997),  
-    2: np.log(24300),     
-    3: np.log(11261),  
-    4: np.log(1778)}
-
-# Calculate probabilities based on the log-transformed population percentages
-class_probabilities = get_class_probabilities(population_counts)
-print(class_probabilities.keys())
-
-# Get number of classes
-num_classes = len(population_counts)
-
-# Create np arrays to track distributions for all classes
-object_type_distributions = [np.full((1, num_classes), 1) \
-                             for _ in range(len(class_dictionary))]
-
-# Generate data for x number of detections
-detection_count = 1000
-object_type_distributions = generate_data(num_classes, object_type_distributions, detection_count)
-print(object_type_distributions[0])
-
-# Create distribution parameters list and predict for new detection
-# distribution_parameters = create_distribution_parameters_list(num_classes, object_type_distributions)
-# detection_prediction = predict_class_for_detection(distribution_parameters, new_detection, class_probabilities)
-
-predictions = predict_class_for_object(object_type_distributions, class_probabilities)
-print(predictions)
