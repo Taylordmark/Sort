@@ -109,7 +109,7 @@ def create_global_data(tracked_object_data, tracked_object_classes, num_classes)
 dict_path = '/home/taylordmark/Thesis/Sort/parsed_data_dict.pkl'
 
 # Define path for list of classes model trained on
-classes_path = 'C:/Users/keela/Documents/Sort/yolo-cls-traffic_only.txt'
+classes_path = '/home/taylordmark/Thesis/Sort/object_dict_traffic.txt'
 
 # Load data from a pickle file
 with open(dict_path, 'rb') as pickle_file:

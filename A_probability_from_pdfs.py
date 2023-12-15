@@ -6,7 +6,7 @@ import pickle
 import os
 
 # Define the path for the parsed dictionary of objects found in frame
-dict_path = 'C:/Users/keela/Documents/Sort/parsed_data_dict.pkl'
+dict_path = '/home/taylordmark/Thesis/Sort/parsed_data_dict.pkl'
 
 # Load data from a pickle file
 with open(dict_path, 'rb') as pickle_file:
