@@ -6,33 +6,13 @@ import pickle
 import os
 
 # Define the path for the parsed dictionary of objects found in frame
-dict_path = '/home/taylordmark/Thesis/Sort/parsed_data_dict.pkl'
+dict_path = r"C:\Users\keela\Documents\Basic_BCE\initial_detections.pkl"
 
 # Load data from a pickle file
 with open(dict_path, 'rb') as pickle_file:
     loaded_frames_detections = pickle.load(pickle_file)
 
-
-def generate_plot(num_classes, object_type_distributions):
-    # Define the number of rows (i) and columns (j) for the panel
-    i, j = num_classes, num_classes
-    # Create subplots for the i x j panel
-    fig, axes = plt.subplots(i, j, figsize=(15, 10))
-    # Loop through each combination of columns and create histograms
-    for row in range(i):
-        for col in range(j):
-            # Plot the histogram
-            axes[row, col].hist(object_type_distributions[row][:, col], bins=10)  # Adjust the number of bins as needed
-            axes[row, col].set_title(f'Column {col + 1} Histogram for Object Type {row + 1}')
-            axes[row, col].set_xlabel('Values')
-            axes[row, col].set_ylabel('Frequency')
-
-            # Set the x-axis limits to match the maximum value
-            axes[row, col].set_xlim(0, max_value)
-
-    # Display the histograms
-    plt.tight_layout()
-    plt.show()
+num_classes=10
 
 def get_prob_from_dist(x, parameters):
   """Returns the probability of a number being from a right skewed distribution using all three parameters in a list: shape, scale, and loc, respectively.
@@ -50,68 +30,61 @@ def get_prob_from_dist(x, parameters):
 
   return probability
 
-def get_class_probabilities(population_counts):
-    total_population = sum(population_counts.values())
-    class_probabilities = {key: value / total_population for key, value in population_counts.items()}
+def get_class_probabilities(class_dictionary):
+    total_population = sum(class_dictionary.values())
+    class_probabilities = {int(key): value / total_population for key, value in class_dictionary.items()}
     return class_probabilities
 
+def create_plots(no_bayes_data, bayes_data):
+    # Create the figure and axes
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    
+    # Plot the first histogram
+    axs[0].hist(no_bayes_data, bins=20, alpha=0.5, label="Data 1")
+    
+    # Plot the second histogram
+    axs[1].hist(bayes_data, bins=20, alpha=0.5, label="Data 2")
+    
+    # Add labels and title
+    axs[0].set_xlabel("Values")
+    axs[0].set_ylabel("Frequency")
+    axs[0].set_title("Not Bayesed Distribution")
+    axs[1].set_xlabel("Values")
+    axs[1].set_ylabel("Frequency")
+    axs[1].set_title("Bayesed Distribution")
+    
+    # Add legend
+    plt.legend(loc="upper right")
+    
+    # Tight layout
+    plt.tight_layout()
+    
+    # Show the plot
+    plt.show()
+
 # Define the labels for each class
-class_dictionary = {
-    0: "0",
-    1: "1",
-    2: "2",
-    3: "3",
-    4: "4",
-    5: "5",
-    6: "6",
-    7: "7",
-    8: "8",
-    9: "9",
-    10: "10",
-    11: "11",
-    12: "12",
-    13: "13"
-}
+class_dictionary = {}
 
-# Define the population percentages for each class
-population_counts = {
-    0: 501997,
-    1: 24892,
-    2: 24300,
-    3: 11261,
-    4: 1778,
-    5: 12345,
-    6: 5432,
-    7: 9876,
-    8: 5678,
-    9: 9876,
-    10: 3456,
-    11: 2345,
-    12: 7890,
-    13: 4567
-}
-
-# Log transform initial population values
-population_counts = {key: int(np.log(value)) for key, value in population_counts.items()}
-
+for dict_class in range(num_classes):
+    name = str(dict_class)
+    amt = int(np.log(random.random() * 5000))
+    class_dictionary[name] = amt
+    
 # Calculate probabilities based on the log-transformed population percentages
-class_probabilities = get_class_probabilities(population_counts)
+class_probabilities = get_class_probabilities(class_dictionary)
 
-
-# Load data from a pickle file
+# Load detections from a pickle file
 with open(dict_path, 'rb') as pickle_file:
     loaded_frames_detections = pickle.load(pickle_file)
     
 not_bayesed_predictions = []
 for f in loaded_frames_detections.values():
-    for d in f['classes']:
+    for d in f['probabilities']:
         not_bayesed_predictions.append(d)
-        
-        
         
 total_classes = len(loaded_frames_detections[0]['probabilities'][0])
 
-global_data = {i: np.array([[0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0]]) for i in range(13)}
+global_data = {i: np.array([[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]) for i in range(10)}
 
 
 
@@ -199,18 +172,15 @@ def local_parameterize(history):
 
     return col_parameters
 
-
 print("Filling globals")
-
 
 while all_values_length_gt_0(global_data):
     for frame, result in loaded_frames_detections.items():
         for box_num, box in enumerate(result['probabilities']):
-            fake_prediction = result['classes'][box_num]
+            fake_prediction = np.argmax(result['probabilities'][box_num])
             global_data[fake_prediction] = np.vstack((global_data[fake_prediction], box))
 
 print("Globals filled")
-
 
 # Make empty lists a list of zeros for now
 for value in loaded_frames_detections.values():
@@ -221,6 +191,7 @@ for value in loaded_frames_detections.values():
 print("Parameterizing")
 distribution_parameters = global_parameterize(global_data)
 print("Parameterized")
+
 
 # Now back to our regularly scheduled program
 
@@ -258,29 +229,10 @@ for frame, value in loaded_frames_detections.items():
     print(f"Processing frames {round(frame/len(loaded_frames_detections.keys()), 3)}")
 
 
-        
-# Create the figure and axes
-fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-
-# Plot the first histogram
-axs[0].hist(not_bayesed_predictions, bins=20, alpha=0.5, label="Data 1")
-
-# Plot the second histogram
-axs[1].hist(all_predictions, bins=20, alpha=0.5, label="Data 2")
-
-# Add labels and title
-axs[0].set_xlabel("Values")
-axs[0].set_ylabel("Frequency")
-axs[0].set_title("Not Bayesed Distribution")
-axs[1].set_xlabel("Values")
-axs[1].set_ylabel("Frequency")
-axs[1].set_title("Bayesed Distribution")
-
-# Add legend
-plt.legend(loc="upper right")
-
-# Tight layout
-plt.tight_layout()
-
-# Show the plot
-plt.show()
+detections_path = r"C:\Users\keela\Documents\Basic_BCE\BayesA.pkl"
+# Save the dictionary to a .pkl file
+with open(detections_path, 'wb') as file:
+    pickle.dump(all_predictions, file)
+    
+    
+    
