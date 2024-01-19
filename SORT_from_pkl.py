@@ -17,53 +17,54 @@ import csv
 matplotlib.use('Agg')
 
 # Define the path for the parsed dictionary of objects found in frame
-dict_path = r"C:\Users\keela\Documents\Basic_BCE\initial_detections.pkl"
-output_path = r"C:\Users\keela\Documents\Basic_BCE\sort_results.pkl"
 
-# Load data from a pickle file
-with open(dict_path, 'rb') as pickle_file:
-    loaded_frames_detections = pickle.load(pickle_file)
 
-# Initialize SORT tracker
-mot_tracker = sort.Sort()
 
-# Create and open a pickle file for writing tracking results
-with open(output_path, 'wb') as pickle_file:
-    results_dict = {}
+def SORT_initial_detections(dict_path = r"C:\Users\keela\Documents\Basic_BCE\initial_detections.pkl",\
+                            output_path = r"C:\Users\keela\Documents\Basic_BCE\sort_results.pkl"):
+    # Load data from a pickle file
+    with open(dict_path, 'rb') as pickle_file:
+        loaded_frames_detections = pickle.load(pickle_file)
 
-    for frame_num, frame_data in loaded_frames_detections.items():
-        boxes = frame_data['boxes']
-        probabilities = frame_data['probabilities']
+    # Initialize SORT tracker
+    mot_tracker = sort.Sort()
 
-        detections = []
-        for box, confidence in zip(boxes, probabilities):
-            b = [box[0], box[1], box[0]+box[2], box[1]+box[3]]  # xywh to xyxy, as SORT wants xyxy format
-            c = confidence
-            detections.append(b)
+    # Create and open a pickle file for writing tracking results
+    with open(output_path, 'wb') as pickle_file:
+        results_dict = {}
 
-        # Use SORT to update object tracking
-        track_bbs_ids = mot_tracker.update(detections)
+        for frame_num, frame_data in loaded_frames_detections.items():
+            boxes = frame_data['boxes']
+            probabilities = frame_data['probabilities']
 
-        frame_results = []
-        for (xmin, ymin, xmax, ymax, obj_id), confidence in zip(track_bbs_ids, probabilities):
-            xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
+            detections = []
+            for box, confidence in zip(boxes, probabilities):
+                b = [box[0], box[1], box[0]+box[2], box[1]+box[3]]  # xywh to xyxy, as SORT wants xyxy format
+                c = confidence
+                detections.append(b)
 
-            object_id_and_class = f"{np.argmax(confidence)}: {np.max(confidence):.3f}"
+            # Use SORT to update object tracking
+            track_bbs_ids = mot_tracker.update(detections)
 
-            frame_results.append({
-                'ObjectID': int(obj_id),
-                'X': xmin,
-                'Y': ymin,
-                'Width': xmax - xmin,
-                'Height': ymax - ymin,
-                'Confidence': float(np.max(confidence)),
-                'Class': np.argmax(confidence)
-            })
+            frame_results = []
+            for (xmin, ymin, xmax, ymax, obj_id), confidence in zip(track_bbs_ids, probabilities):
+                xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
 
-        # Save the frame results to the dictionary
-        results_dict[frame_num] = frame_results
+                frame_results.append({
+                    'ObjectID': int(obj_id),
+                    'X': xmin,
+                    'Y': ymin,
+                    'Width': xmax - xmin,
+                    'Height': ymax - ymin,
+                    'Confidence': float(np.max(confidence)),
+                    'Class': np.argmax(confidence)
+                })
 
-    # Save the results dictionary to the pickle file
-    pickle.dump(results_dict, pickle_file)
+            # Save the frame results to the dictionary
+            results_dict[frame_num] = frame_results
 
-print(f'Results saved as detect_and_sort_results.pkl')
+        # Save the results dictionary to the pickle file
+        pickle.dump(results_dict, pickle_file)
+
+if __name__ == "__main":
+    SORT_initial_detections()

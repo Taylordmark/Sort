@@ -9,7 +9,7 @@ import random
 import matplotlib.pyplot as plt
 import os
 
-from A_probability_from_pdfs import get_prob_from_dist, global_parameterize
+from Bayesian_A_from_pkl import get_prob_from_dist, global_parameterize
 
 
 

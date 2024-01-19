@@ -4,13 +4,12 @@ from pathlib import Path
 import os
 import numpy as np
 
-def generate_video_from_pkl(pkl_file_path, output_video_path):
+def generate_video_from_pkl(pkl_file_path, output_video_path, img_path):
     with open(pkl_file_path, 'rb') as pickle_file:
         results_dict = pickle.load(pickle_file)
 
     # Path to the image folder
-    img_pth = r"C:\Users\keela\Documents\Video Outputs\b1c9c847-3bda4659"
-    image_folder = Path(img_pth)
+    image_folder = Path(img_path)
 
     # Get the dimensions of the first image in the folder
     first_image = next(image_folder.iterdir())
@@ -57,5 +56,6 @@ def generate_video_from_pkl(pkl_file_path, output_video_path):
     print(f'Video saved as {output_video_path}')
 
 # Replace 'your_file_path.pkl' and 'your_output_video_path.avi' with the actual paths
-generate_video_from_pkl(r'C:\Users\keela\Documents\Basic_BCE\initial_detections.pkl',\
-                         r'C:\Users\keela\Documents\Basic_BCE\initial_detections.avi')
+generate_video_from_pkl(r'C:\Users\keela\Documents\Models\bce\initial_detections.pkl',\
+                         r'C:\Users\keela\Documents\Models\bce\initial_detections.avi',\
+                            r"C:\Users\keela\Documents\Video Outputs\0000f77c-6257be58\frames")
