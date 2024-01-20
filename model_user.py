@@ -26,7 +26,7 @@ tf.compat.v1.enable_eager_execution()
 
 
 
-def use_model(checkpoint_path=r"C:\Users\keela\Documents\Models\bce",
+def use_model(checkpoint_path=r"C:\Users\keela\Documents\Models\LastMInuteRuns\Big_CCE",
               image_folder=r"C:\Users\keela\Documents\Video Outputs\0000f77c-6257be58\frames",
               cls_path=r"C:\Users\keela\Documents\Prebayesian\class_list_traffic.txt",
               download_path=r"C:\Users\keela\Documents\Prebayesian\download_list_traffic.txt",
