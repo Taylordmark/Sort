@@ -24,8 +24,9 @@ def get_prob_from_dist(x, parameters):
     return probability
 
 def get_class_probabilities(class_dictionary):
-    total_population = sum(class_dictionary.values())
-    class_probabilities = {int(key): value / total_population for key, value in class_dictionary.items()}
+    class_lengths = [len(data) for data in class_dictionary.values()]
+    total_count = sum(class_lengths)
+    class_probabilities = [data / total_count for data in class_lengths]
     return class_probabilities
 
 def all_values_length_gt_0(data_dict):
@@ -55,7 +56,7 @@ def global_parameterize(data_dict):
         A list of lists containing distribution parameters for each column.
     """
     # Initialize an empty list of lists to store parameters
-    distribution_parameters = []
+    distribution_parameters = {}
 
     # For each class in the data dictionary
     for k, history in data_dict.items():
@@ -74,7 +75,7 @@ def global_parameterize(data_dict):
             col_parameters.append([a, b, loc, scale])
 
         # Append parameters for the current class to the main list
-        distribution_parameters.append(col_parameters)
+        distribution_parameters[k] = col_parameters
 
     return distribution_parameters
 
@@ -131,17 +132,6 @@ def BayesianA(folder_path):
 
     num_classes=10
 
-    # Define the labels for each class
-    class_dictionary = {}
-
-    for dict_class in range(num_classes):
-        name = str(dict_class)
-        amt = int(np.log(random.random() * 5000))
-        class_dictionary[name] = amt
-        
-    # Calculate probabilities based on the log-transformed population percentages
-    class_probabilities = get_class_probabilities(class_dictionary)
-
     # Load detections from a pickle file
     with open(dict_path, 'rb') as pickle_file:
         loaded_frames_detections = pickle.load(pickle_file)
@@ -153,40 +143,19 @@ def BayesianA(folder_path):
             
     total_classes = len(loaded_frames_detections[0]['probabilities'][0])
 
-    global_data = {i: np.array([[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]) for i in range(10)}
-
-
-
-    # This part will not exist in the working code but I need to fill
-    # the global data with something for the rest of it to compare to
-
-    # Checks if any dict values are > 30, returns True or False
-
+    global_data_path = os.path.join(folder_path, "global_data.pkl")
     
-    # Calculates and returns all global distribution parameters
-    
-    print("Filling globals")
-
-    while all_values_length_gt_0(global_data):
-        for frame, result in loaded_frames_detections.items():
-            for box_num, box in enumerate(result['probabilities']):
-                fake_prediction = np.argmax(result['probabilities'][box_num])
-                global_data[fake_prediction] = np.vstack((global_data[fake_prediction], box))
-
-    print("Globals filled")
-
-    # Make empty lists a list of zeros for now
-    for value in loaded_frames_detections.values():
-        if len(value) == 0:
-            value = [0 for i in range(total_classes)]
+    # Load data from a pickle file
+    with open(global_data_path, 'rb') as pickle_file:
+        global_data = pickle.load(pickle_file)
 
     # Calculate global distribution parameters
     print("Parameterizing")
     distribution_parameters = global_parameterize(global_data)
     print("Parameterized")
+    
+    class_probabilities = get_class_probabilities(global_data)
 
-
-    # Now back to our regularly scheduled program
     frame_count = len(loaded_frames_detections.keys())
     counter = 0
     prev_chkpt = 0
@@ -207,7 +176,7 @@ def BayesianA(folder_path):
         detection_total = len(value['boxes'])
 
         # Limit number of detections processed
-        for detection in range(min(8, len(value['boxes']))):
+        for detection in range(len(value['boxes'])):
             print(f"{detection_counter / detection_total:.2f}")
             detection_counter += 1
 
@@ -215,7 +184,7 @@ def BayesianA(folder_path):
 
             # Calculate the pdfs of the new detection using dist parameters
             pdfs = []
-            for feature_distribution in distribution_parameters:
+            for class_index, feature_distribution in distribution_parameters.items():
                 p = 1
                 for index, (a, b, loc, scale) in enumerate(feature_distribution):
                     probability = beta.pdf(new_detection[index], a, b, loc=loc, scale=scale)
@@ -225,9 +194,10 @@ def BayesianA(folder_path):
                 pdfs.append(p)
 
             # Multiply by population probabilities
+            
             pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
 
-            prediction = np.argmax(pdfs)
+            prediction = np.argmax(pdfs) - 1
 
             # Add data to where it was predicted to belong
             global_data[prediction] = np.vstack((global_data[prediction], new_detection))
@@ -248,5 +218,5 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Documents\Models\Basic_MSE"
+    folder_path = r"C:\Users\keela\Documents\Models\Basic_CCE"
     BayesianA(folder_path)
