@@ -162,29 +162,29 @@ def BayesianA(folder_path):
     
     class_probabilities = get_class_probabilities(global_data)
 
-    frame_count = len(loaded_frames_detections.keys())
-    counter = 0
     prev_chkpt = 0
 
     all_predictions = []
     classes_to_reparameterize = set()  # Track classes with new data
-
+    
+    frame_number = 0
+    frame_count = len(loaded_frames_detections.keys())
+    
     # For each frame in the detections dict
     for frame, value in loaded_frames_detections.items():
-        counter += 1
-        percent = round(counter / frame_count, 2)
-        if percent > prev_chkpt:
-            print(f"\nFrames: {percent}\n")
-            prev_chkpt = percent
-
-        # For each detection in the frame
-        detection_counter = 0
-        detection_total = len(value['boxes'])
+        frame_number += 1
+    
+        # Calculate percent with more control over formatting
+        percent_unrounded = frame_number / frame_count
+        percent_str = "{:.0f}".format(percent_unrounded * 100)  # Format to 1 decimal place
+    
+        # Ensure that we only print when the formatted percent changes
+        if percent_str != prev_chkpt:
+            print(f"Frames: {percent_str}%")
+            prev_chkpt = percent_str
 
         # Limit number of detections processed
         for detection in range(len(value['boxes'])):
-            print(f"{detection_counter / detection_total:.2f}")
-            detection_counter += 1
 
             new_detection = value['probabilities'][detection]
 
@@ -216,7 +216,6 @@ def BayesianA(folder_path):
         classes_to_reparameterize.clear()  # Reset for the next frame
 
         all_predictions.append(prediction)
-        print(f"Processing frames {round(frame/len(loaded_frames_detections.keys()), 3)}")
 
     
     # Save the dictionary to a .pkl file
