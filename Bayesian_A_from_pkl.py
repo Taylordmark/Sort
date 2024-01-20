@@ -80,7 +80,13 @@ def global_parameterize(data_dict):
     return distribution_parameters
 
 def fit_beta(data):
-    return beta.fit(data)
+    try:
+        return beta.fit(data)
+    except:
+        print("FitError: Returning default parameters.")
+        # Return default parameters or handle as needed
+        return [1, 100, 0, 0]
+
 
 def local_parameterize(history):
     col_parameters = []
