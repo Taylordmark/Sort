@@ -121,7 +121,10 @@ def create_plots(no_bayes_data, bayes_data):
     plt.show()
 
 
-def BayesianA(dict_path, SavePath):
+def BayesianA(folder_path):
+    SavePath= os.path.join(folder_path, "BayesA.pkl")
+    dict_path = os.path.join(folder_path, "initial_detections.pkl")
+
     # Load data from a pickle file
     with open(dict_path, 'rb') as pickle_file:
         loaded_frames_detections = pickle.load(pickle_file)
@@ -245,6 +248,5 @@ def BayesianA(dict_path, SavePath):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    SavePath= r"C:\Users\keela\Documents\Models\Sigmoid_Only\BayesA.pkl"
-    dict_path = r"C:\Users\keela\Documents\Models\Sigmoid_Only\initial_detections.pkl"
-    BayesianA(dict_path, SavePath)
+    folder_path = r"C:\Users\keela\Documents\Models\Basic_MSE"
+    BayesianA(folder_path)
