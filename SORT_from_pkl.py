@@ -20,8 +20,9 @@ matplotlib.use('Agg')
 
 
 
-def SORT_initial_detections(dict_path = r"C:\Users\keela\Documents\Basic_BCE\initial_detections.pkl",\
-                            output_path = r"C:\Users\keela\Documents\Basic_BCE\sort_results.pkl"):
+def SORT_initial_detections(folder_path):
+    dict_path = os.path.join(folder_path, "initial_detections.pkl")
+    output_path = os.path.join("sort_results.pkl")
     # Load data from a pickle file
     with open(dict_path, 'rb') as pickle_file:
         loaded_frames_detections = pickle.load(pickle_file)
@@ -67,4 +68,5 @@ def SORT_initial_detections(dict_path = r"C:\Users\keela\Documents\Basic_BCE\ini
         pickle.dump(results_dict, pickle_file)
 
 if __name__ == "__main":
-    SORT_initial_detections()
+    folder_path = r"C:\Users\keela\Documents\Models\binary_crossentropy"
+    SORT_initial_detections(folder_path)
