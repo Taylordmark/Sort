@@ -5,6 +5,7 @@ from scipy.stats import beta
 import pickle
 import os
 import concurrent.futures
+from fit_beta_cython import fit_beta_cython
 
 
 def get_prob_from_dist(x, parameters):
@@ -87,13 +88,24 @@ def fit_beta(data):
         # Return default parameters or handle as needed
         return [1, 100, 0, 0]
 
-
-def local_parameterize(history):
+def local_parameterize_CPU(history):
     col_parameters = []
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # Map the fit_beta function to each column of the history
         results = executor.map(fit_beta, history.T)
+
+    # Store parameters for each column
+    col_parameters = list(results)
+
+    return col_parameters
+
+def local_parameterize_GPU(history):
+    col_parameters = []
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Map the fit_beta_cython function to each column of the history
+        results = executor.map(fit_beta_cython, history.T)
 
     # Store parameters for each column
     col_parameters = list(results)
@@ -127,16 +139,14 @@ def create_plots(no_bayes_data, bayes_data):
     # Show the plot
     plt.show()
 
-
 def BayesianA(folder_path):
     SavePath= os.path.join(folder_path, "BayesA.pkl")
-    dict_path = os.path.join(folder_path, "initial_detections.pkl")
-
+    # dict_path = os.path.join(folder_path, "initial_detections.pkl")
+    dict_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MSE\b1c9c847-3bda4659_initial_detections.pkl"
+    
     # Load data from a pickle file
     with open(dict_path, 'rb') as pickle_file:
         loaded_frames_detections = pickle.load(pickle_file)
-
-    num_classes=10
 
     # Load detections from a pickle file
     with open(dict_path, 'rb') as pickle_file:
@@ -146,9 +156,7 @@ def BayesianA(folder_path):
     for f in loaded_frames_detections.values():
         for d in f['probabilities']:
             not_bayesed_predictions.append(d)
-            
-    total_classes = len(loaded_frames_detections[0]['probabilities'][0])
-
+    
     global_data_path = os.path.join(folder_path, "global_data.pkl")
     
     # Load data from a pickle file
@@ -164,28 +172,30 @@ def BayesianA(folder_path):
 
     prev_chkpt = 0
 
-    all_predictions = []
+    all_predictions = {}
     classes_to_reparameterize = set()  # Track classes with new data
     
-    frame_number = 0
     frame_count = len(loaded_frames_detections.keys())
     
     # For each frame in the detections dict
     for frame, value in loaded_frames_detections.items():
-        frame_number += 1
-    
+        
+        # Recalculate class_probabiities
+        class_probabilities = get_class_probabilities(global_data)
+        
         # Calculate percent with more control over formatting
-        percent_unrounded = frame_number / frame_count
+        percent_unrounded = frame / frame_count
         percent_str = "{:.0f}".format(percent_unrounded * 100)  # Format to 1 decimal place
     
-        # Ensure that we only print when the formatted percent changes
+        # Print progress
         if percent_str != prev_chkpt:
             print(f"Frames: {percent_str}%")
             prev_chkpt = percent_str
 
-        # Limit number of detections processed
+        # For each box
         for detection in range(len(value['boxes'])):
-
+            
+            # Get probabilities
             new_detection = value['probabilities'][detection]
 
             # Calculate the pdfs of the new detection using dist parameters
@@ -198,11 +208,11 @@ def BayesianA(folder_path):
                     probability += 0.001
                     p *= probability
                 pdfs.append(p)
-
-            # Multiply by population probabilities
             
+            # Multiply by class probabilities
             pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
-
+            
+            # Return predicted class adjusted for list / class dict index differences
             prediction = np.argmax(pdfs) - 1
 
             # Add data to where it was predicted to belong
@@ -212,10 +222,11 @@ def BayesianA(folder_path):
         # Reparameterize classes with new data after the frame
         print(classes_to_reparameterize)
         for class_to_reparam in classes_to_reparameterize:
-            distribution_parameters[class_to_reparam] = local_parameterize(global_data[class_to_reparam])
-        classes_to_reparameterize.clear()  # Reset for the next frame
-
-        all_predictions.append(prediction)
+            distribution_parameters[class_to_reparam] = local_parameterize_GPU(global_data[class_to_reparam])
+        classes_to_reparameterize.clear()  # Reset set for the next frame
+        
+        # Append boxes and prediction to all_predictions
+        all_predictions[frame] = {'boxes': value['boxes'], 'probabilities': [prediction]}
 
     
     # Save the dictionary to a .pkl file
@@ -223,5 +234,5 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Documents\Models\Basic_CCE"
+    folder_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MSE"
     BayesianA(folder_path)
