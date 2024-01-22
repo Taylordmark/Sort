@@ -30,21 +30,6 @@ def get_class_probabilities(class_dictionary):
     class_probabilities = [data / total_count for data in class_lengths]
     return class_probabilities
 
-def all_values_length_gt_0(data_dict):
-        """
-        Checks if all values in the dictionary are np arrays with no elements between 0 and 30 (exclusive).
-
-        Args:
-            data_dict: A dictionary where values are np arrays.
-
-        Returns:
-            True if all values have no elements > 30, False otherwise.
-        """
-        for value in data_dict.values():
-            if len(value) > 30:
-                return False
-            else:
-                return True
 
 def global_parameterize(data_dict):
     """
