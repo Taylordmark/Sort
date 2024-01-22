@@ -142,11 +142,7 @@ def create_plots(no_bayes_data, bayes_data):
 def BayesianA(folder_path):
     SavePath= os.path.join(folder_path, "BayesA.pkl")
     # dict_path = os.path.join(folder_path, "initial_detections.pkl")
-    dict_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MSE\b1c9c847-3bda4659_initial_detections.pkl"
-    
-    # Load data from a pickle file
-    with open(dict_path, 'rb') as pickle_file:
-        loaded_frames_detections = pickle.load(pickle_file)
+    dict_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\000f8d37-d4c09a0f_initial_detections.pkl"
 
     # Load detections from a pickle file
     with open(dict_path, 'rb') as pickle_file:
@@ -234,5 +230,5 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MSE"
+    folder_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE"
     BayesianA(folder_path)
