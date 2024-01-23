@@ -85,11 +85,13 @@ def predict_detection_class(distribution_parameters, new_features, class_probabi
     prediction = np.argmax(pdfs) - 1
     return prediction
 
-# Define the path for the global data dictionary
-global_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\global_data.pkl"
-
+# Define the model folder path
+model_folder = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE"
 # Define the path for the parsed dictionary of objects found in frame
 detections_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\000f8d37-d4c09a0f_initial_detections.pkl"
+
+
+global_path = os.path.join(model_folder, "global_data.pkl")
 
 # Define path for list of classes model trained on
 classes_path = r"C:\Users\keela\Documents\Prebayesian\class_list_traffic.txt"
@@ -129,6 +131,14 @@ for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()
     # Update SORT with boxes
     trackers = mot_tracker.update(boxes)
     
+    # Get predicted class from pdfs
+    class_probabilities = [value / sum(class_counts) for value in class_counts]
+    # Combat 'unknown' object weight inflation
+    class_probabilities[0] = min(class_probabilities[0], 0.25)
+    sum_of_probs = sum(class_probabilities)
+    # Renormalize
+    class_probabilities = [value / sum_of_probs for value in class_counts]
+    
     # If objects are tracked
     if len(trackers) > 0:
         # Iterate through tracked objects
@@ -139,13 +149,6 @@ for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()
             index = find_matching_box_index(boxes, bbox)
             
             new_probabilities = np.array(probabilities[index][:])
-            
-            # Get predicted class from pdfs
-            class_probabilities = [value / sum(class_counts) for value in class_counts]
-            # Combat 'unknown' object weight inflation
-            class_probabilities[0] = 0.25
-            # Renormalize
-            class_probabilities = [value / sum(class_counts) for value in class_counts]
             
             # If the object is new
             if track_id not in tracked_object_data.keys():                
@@ -188,7 +191,10 @@ for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()
                 tracked_object_data[track_id]['boxes'] = np.vstack([tracked_object_data[track_id]['boxes'], bbox])
                 tracked_object_data[track_id]['class'].append(predicted_class)
                 tracked_object_data[track_id]['frames'].append(frame_num)
-                
             
     else:
         print(f"Nothing tracked in {frame}")
+
+# Save the dictionary to a .pkl file
+with open(os.path.join(model_folder, "BayesB.pkl"), 'wb') as file:
+    pickle.dump(tracked_object_data, file)
