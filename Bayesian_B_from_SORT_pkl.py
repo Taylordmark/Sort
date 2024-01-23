@@ -123,7 +123,7 @@ tracked_object_data = {}
 track_ids = []
 
 # Iterate through every detection in the dictionary
-for frame, detections in loaded_frames_detections.items():
+for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()):
     boxes, probabilities = parse_data_from_detections(detections)
 
     # Update SORT with boxes
@@ -157,7 +157,8 @@ for frame, detections in loaded_frames_detections.items():
                 # Add class prediction to dictionary
                 tracked_object_data[track_id] = {"boxes":[bbox],\
                                                  "class":[predicted_class],\
-                                                 'probabilities':new_probabilities}
+                                                 'probabilities':new_probabilities,\
+                                                 'frames': [frame_num]}
 
                 # Add +1 to population counts for proper class
                 class_counts[predicted_class+1] += 1
@@ -186,8 +187,8 @@ for frame, detections in loaded_frames_detections.items():
                 # Update tracked object class dictionary
                 tracked_object_data[track_id]['boxes'] = np.vstack([tracked_object_data[track_id]['boxes'], bbox])
                 tracked_object_data[track_id]['class'].append(predicted_class)
-
+                tracked_object_data[track_id]['frames'].append(frame_num)
+                
             
-        #print(f"{frame}:{trackers}\n")
     else:
         print(f"Nothing tracked in {frame}")
