@@ -9,43 +9,47 @@ import random
 import matplotlib.pyplot as plt
 import os
 
-from Bayesian_A_from_pkl import get_prob_from_dist, global_parameterize
+from Bayesian_A_from_pkl import get_prob_from_dist, global_parameterize, fit_beta
 
 
-
-
-def probabilities_from_populations(population_counts):
-    total_population = sum(population_counts.values())
-    class_probabilities = {key: value / total_population for key, value in population_counts.items()}
-    return class_probabilities
+def class_counts_from_global(global_data):
+    class_counts = [len(value) for value in global_data.values()]
+    return class_counts
 
 def parse_data_from_detections(detections):
-    xywh_boxes, probabilities, classes, names = detections.values()
+    xywh_boxes, probabilities = detections.values()
     xyxy_boxes = []
     for b in xywh_boxes:
         b = [b[0], b[1], b[0]+b[2], b[1]+b[3]]
         xyxy_boxes.append(b)
     boxes = np.array(xyxy_boxes)
     probabilities = np.array(probabilities)
-    classes = np.array(classes)
     
-    return boxes, probabilities, classes, names
+    return boxes, probabilities
 
 def find_matching_box_index(boxes, bbox):
-    for i, box in enumerate(boxes):
-        if np.allclose(box, bbox, rtol=.1):
-            return i
-    return None
-        
+    # Calculate distances between all SORT boxes and all detection boxes
+    boxes_centers = np.stack([boxes[:, 1] - boxes[:, 0], boxes[:, 3] - boxes[:, 2]], axis=1)
+    bbox_center = np.array([bbox[1] - bbox[0], bbox[3] - bbox[2]])
+    distances = boxes_centers - bbox_center
+
+    # Calculate Euclidean distances
+    distances = np.linalg.norm(distances, axis=1)
+
+    # Find the indices of the detection boxes with the minimum distances
+    min_distance_indices = np.argmin(distances, axis=0)
+
+    return min_distance_indices
+
 def predict_tracker_class(global_data, object_history, class_probabilities):
     
     # KS test all classes, features and get list of p values
     pvals = []
-    for c in global_data:
+    for c, m in global_data.items():
         pval = 1 
-        for i in range(c.shape[1]):
+        for i in range(m.shape[1]):
             # Perform the KS test for each column
-            ks_statistic, p_value = ks_2samp(c[:, i], object_history[:, i])
+            ks_statistic, p_value = ks_2samp(m[:, i], object_history[:, i])
     
             # Append the p-value to the pvals list
             pval *= p_value
@@ -56,65 +60,47 @@ def predict_tracker_class(global_data, object_history, class_probabilities):
 
     return predicted_class
 
-def predict_detection_class(distribution_parameters, new_distribution, class_probabilities):
+def predict_detection_class(distribution_parameters, new_features, class_probabilities):
     """Inputs: 
         global class distribution parameters
-        new distribution parameters
+        new features
         global class probabilities
        Outputs:
         predicted class
        """
         
     pdfs = []
-    for row in distribution_parameters:
+    for class_id in distribution_parameters.keys():
         p = 1
-        for index, (a, b, loc, scale) in enumerate(row):
-            probability = beta.pdf(new_distribution[index], a, b, loc=loc, scale=scale)
+        for feature_parameters, new_feature in zip(distribution_parameters[class_id], new_features):
+            a, b, loc, scale = feature_parameters
+            probability = beta.pdf(new_feature, a, b, loc=loc, scale=scale)
             p *= probability
-        pdfs.append(p)
 
+        pdfs.append(p)
+    
     # Multiply by population probabilities
     pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
-
-    prediction = pdfs.index(max(pdfs))
+    
+    prediction = np.argmax(pdfs) - 1
     return prediction
 
-def create_global_data(tracked_object_data, tracked_object_classes, num_classes):
-  """
-  Creates and initializes the global data structure based on tracked object data and classes.
-
-  Args:
-    tracked_object_data: A dictionary containing tracked object data for each object ID.
-    tracked_object_classes: A dictionary containing the predicted class for each tracked object.
-    num_classes: The total number of object classes.
-
-  Returns:
-    global_data: An np.array containing the global data structure, initialized with tracked object data.
-  """
-
-  global_data = np.full((num_classes, 1), 1)  # Initialize with empty data for all classes
-
-  # Iterate through tracked object data
-  for track_id, data in tracked_object_data.items():
-    predicted_class = tracked_object_classes.get(track_id, None)  # Get predicted class
-    if predicted_class:
-      # Update global data for the predicted class
-      global_data[predicted_class] = np.vstack((global_data[predicted_class], data))
-
-  return global_data
-
-
+# Define the path for the global data dictionary
+global_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\global_data.pkl"
 
 # Define the path for the parsed dictionary of objects found in frame
-dict_path = '/home/taylordmark/Thesis/Sort/parsed_data_dict.pkl'
+detections_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\000f8d37-d4c09a0f_initial_detections.pkl"
 
 # Define path for list of classes model trained on
-classes_path = '/home/taylordmark/Thesis/Sort/object_dict_traffic.txt'
+classes_path = r"C:\Users\keela\Documents\Prebayesian\class_list_traffic.txt"
 
 # Load data from a pickle file
-with open(dict_path, 'rb') as pickle_file:
+with open(detections_path, 'rb') as pickle_file:
     loaded_frames_detections = pickle.load(pickle_file)
 
+# Load data from a pickle file
+with open(global_path, 'rb') as pickle_file:
+    global_data = pickle.load(pickle_file)
 
 # Get all classes
 with open(classes_path, 'r') as classes_file:
@@ -122,14 +108,11 @@ with open(classes_path, 'r') as classes_file:
 classes = [c.replace("\n", "") for c in classes]
 num_classes = len(classes)
 
-# Generate fake distributions for previous class instances (fix later)
-population_counts = {}
-
-for c in range(num_classes):
-    population_counts[c] = int(np.log(float((random.randint(1,10000))**5)))
-
 # Get class probabilities from population counts
-class_probabilities = probabilities_from_populations(population_counts)
+class_counts = class_counts_from_global(global_data)
+
+# Get distribution parameters from global data
+distribution_parameters = global_parameterize(global_data)
 
 # Initialize SORT tracker
 mot_tracker = Sort()
@@ -137,72 +120,72 @@ mot_tracker = Sort()
 # Initialize dict of data for each tracked object
 tracked_object_data = {}
 
-# Initialize dict of data for predicted object class
-tracked_object_classes = {}
+track_ids = []
 
 # Iterate through every detection in the dictionary
 for frame, detections in loaded_frames_detections.items():
-    boxes, probabilities, classes, names = parse_data_from_detections(detections)
-    
-    
+    boxes, probabilities = parse_data_from_detections(detections)
+
     # Update SORT with boxes
     trackers = mot_tracker.update(boxes)
     
-    # If there is a tracked object
+    # If objects are tracked
     if len(trackers) > 0:
         # Iterate through tracked objects
         for o in trackers:
             bbox = o[:4]
             track_id = o[-1]
             
+            index = find_matching_box_index(boxes, bbox)
+            
+            new_probabilities = np.array(probabilities[index][:])
+            
+            # Get predicted class from pdfs
+            class_probabilities = [value / sum(class_counts) for value in class_counts]
+            # Combat 'unknown' object weight inflation
+            class_probabilities[0] = 0.25
+            # Renormalize
+            class_probabilities = [value / sum(class_counts) for value in class_counts]
+            
             # If the object is new
-            if track_id not in tracked_object_data.keys():
-                # Find which of the current bboxes match
-                index = find_matching_box_index(boxes, bbox)
-
+            if track_id not in tracked_object_data.keys():                
                 # Get data from the proper index
-                features = np.array(probabilities[index])
+                features = probabilities[index]
 
-                # Set track data to features list
-                tracked_object_data[track_id] = features
-                
-                # Fill global_data
-                global_data = create_global_data(tracked_object_data, tracked_object_classes, num_classes)
-
-                # Get predicted class from pdfs
-                predicted_class = predict_detection_class(global_data, features, class_probabilities)
+                predicted_class = predict_detection_class(distribution_parameters, features, class_probabilities)
 
                 # Add class prediction to dictionary
-                tracked_object_classes[predicted_class] = predicted_class
+                tracked_object_data[track_id] = {"boxes":[bbox],\
+                                                 "class":[predicted_class],\
+                                                 'probabilities':new_probabilities}
 
                 # Add +1 to population counts for proper class
-                population_counts[predicted_class] += 1
+                class_counts[predicted_class+1] += 1
             
             # If the object has been seen before
             else:
-                # Append probability data to the list
-                tracked_object_data[track_id] = np.vstack(np.array(probabilities[index]))
-                
-                # Fill global_data
-                global_data = create_global_data(tracked_object_data, tracked_object_classes, num_classes)
+                # Append probability data to the array
+                tracked_object_data[track_id]['probabilities'] = np.vstack([tracked_object_data[track_id]['probabilities'], new_probabilities])
+
 
                 # Predict the class of the object based on all data
                 predicted_class = \
-                    predict_detection_class(global_data, \
-                                             tracked_object_data[track_id], \
-                                                 class_probabilities)
+                predict_tracker_class(global_data, \
+                                         tracked_object_data[track_id]['probabilities'], \
+                                             class_probabilities)
                 
                 # Check if predicted class matches the prediction from previous frames in dict
-                previous_class = tracked_object_classes.get(track_id, None)  # Get previously predicted class, if any
+                previous_class = tracked_object_data[track_id]['class'][-1]
                 
                 if predicted_class != previous_class:
                     # Update population counts
                     if previous_class:
-                        population_counts[previous_class] -= 1  # Subtract from previous class
-                    population_counts[predicted_class] += 1  # Add to new class
+                        class_counts[previous_class] -= 1  # Subtract from previous class
+                    class_counts[predicted_class] += 1  # Add to new class
 
-                    # Update tracked object class dictionary
-                    tracked_object_classes[track_id] = predicted_class
+                # Update tracked object class dictionary
+                tracked_object_data[track_id]['boxes'] = np.vstack([tracked_object_data[track_id]['boxes'], bbox])
+                tracked_object_data[track_id]['class'].append(predicted_class)
 
             
         #print(f"{frame}:{trackers}\n")
