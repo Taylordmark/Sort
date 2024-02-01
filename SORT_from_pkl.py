@@ -17,8 +17,8 @@ import csv
 matplotlib.use('Agg')
 
 
-folder_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\000f8d37-d4c09a0f_initial_detections.pkl"
-output_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\sort_results.pkl"
+folder_path = r"C:\Users\keela\Coding\Models\LongRuns\MLE_L2_Sigmoid\initial_detections.pkl"
+output_path = r"C:\Users\keela\Coding\Models\LongRuns\MLE_L2_Sigmoid\sort_results.pkl"
 
 # Load data from a pickle file
 with open(folder_path, 'rb') as pickle_file:
@@ -33,18 +33,15 @@ with open(output_path, 'wb') as pickle_file:
 
     for frame_num, frame_data in loaded_frames_detections.items():
         boxes = frame_data['boxes']
-        probabilities = frame_data['probabilities']
-
-        detections = []
-        for box, confidence in zip(boxes, probabilities):
-            b = [box[0], box[1], box[0]+box[2], box[1]+box[3]]  # xywh to xyxy, as SORT wants xyxy format
-            c = confidence
-            detections.append(b)
+        probabilities = frame_data['cls_prob']
 
         # Use SORT to update object tracking
-        track_bbs_ids = mot_tracker.update(detections)
-
-        results_dict[frame_num] = {'boxes': track_bbs_ids[:,0:4], 'probabilities': probabilities, 'track_id':track_bbs_ids[:,-1]}
+        try:
+            track_bbs_ids = mot_tracker.update(boxes)
+            results_dict[frame_num] = {'boxes': track_bbs_ids[:,0:4], 'cls_prob': probabilities, 'track_id':track_bbs_ids[:,-1]}
+        except:
+            print(f"Nothing in frame {frame_num}")
+            results_dict[frame_num] = {'boxes': np.array(boxes), 'cls_prob': np.array(probabilities), 'track_id':np.array([[]])}
 
     # Save the results dictionary to the pickle file
     pickle.dump(results_dict, pickle_file)
