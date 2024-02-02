@@ -51,29 +51,52 @@ def match_boxes(boxes, tracks):
 
     return assignments
 
+"""
+Our model classes are
+0: car
+1: pedestrian
+2: biker
+3: truck
+4: traffic-light
+5: tl-red
+6: tl-green
+"""
 
+
+#convert gt classes to our model classes
 cls_dict ={
-    0: 0,
-    1: 0, 
-    2: 1,
-    3: 6,
+    0: 0, 
+    1: 0, #1 to car
+    2: 1, #2 to pedestrian 
+    3: 6, #3 and 4 to green light
     4: 6,
-    5: 5,
+    5: 5, #5 and 6 to red light
     6: 5,
-    7: 4,
+    7: 4, #7 and 8 to generic light
     8: 4,
-    9: 2,
-    10: 3
+    9: 2, #9 to biker
+    10: 3 #10 to truck
 }
 
-mot_tracker = sort.Sort(min_hits=1, iou_threshold=.3, max_age=4)
+mot_tracker = sort.Sort(min_hits=1, iou_threshold=.4, max_age=2)
 
 #mot_tracker.update()
+
+
+half = False
+skip = True
 
 with open(output_path, 'wb') as pickle_file:
     results_dict = {}
     frame_num = 0
+
+
     for filename in os.listdir(folder_path):
+
+        if half:
+            skip = not skip
+            if skip:
+                continue
 
         dets = []
         clses = []
