@@ -13,8 +13,8 @@ import csv
 import math
 import numpy as np
 
-folder_path = r"C:\Users\nloftus\Documents\Datasets\RFTS1T"
-output_path = r"gt.pkl"
+folder_path = r"C:\Users\nloftus\Documents\Datasets\RoboflowDataset\RFFiltered2"
+output_path = r"gt_3.pkl"
 
 img_size = 512
 
@@ -93,6 +93,9 @@ with open(output_path, 'wb') as pickle_file:
 
     for filename in os.listdir(folder_path):
 
+        if ".txt" not in filename:
+            continue
+
         if half:
             skip = not skip
             if skip:
@@ -119,8 +122,11 @@ with open(output_path, 'wb') as pickle_file:
 
 
 
+        if (dets != []):
+            track_bbs_ids = mot_tracker.update(dets)
+        else:
+            track_bbs_ids = mot_tracker.update(np.empty((0,5)))
 
-        track_bbs_ids = mot_tracker.update(dets)
 
         track_boxes = [[box[0]-(box[2]-box[0])*0.5, box[1]+(box[1]-box[3])*0.5, box[2]-(box[2]-box[0])*0.5, box[3]+(box[1]-box[3])*0.5] for box in track_bbs_ids[:,0:4]]
 

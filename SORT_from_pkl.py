@@ -20,6 +20,9 @@ matplotlib.use('Agg')
 folder_path = r"C:\Users\keela\Coding\Models\LongRuns\MLE_L2_Sigmoid\initial_detections.pkl"
 output_path = r"C:\Users\keela\Coding\Models\QUICKTESTDATA\sort_results.pkl"
 
+folder_path = r"initial_detections.pkl"
+output_path = r"sort_results.pkl"
+
 
 def bb_intersection_over_union(boxA, boxB):
     # Determine the (x, y)-coordinates of the intersection rectangle
