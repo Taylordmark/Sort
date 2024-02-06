@@ -128,6 +128,8 @@ def BayesianA(folder_path):
     SavePath= os.path.join(folder_path, "BayesA.pkl")
     # dict_path = os.path.join(folder_path, "initial_detections.pkl")
     dict_path = r"C:\Users\keela\Documents\Models\LastMinuteRuns\Small_MLE\000f8d37-d4c09a0f_initial_detections.pkl"
+    dict_path = r"initial_detections_2L.pkl"
+
 
     # Load detections from a pickle file
     with open(dict_path, 'rb') as pickle_file:
@@ -135,7 +137,7 @@ def BayesianA(folder_path):
         
     not_bayesed_predictions = []
     for f in loaded_frames_detections.values():
-        for d in f['probabilities']:
+        for d in f['cls_prob']:
             not_bayesed_predictions.append(d)
     
     global_data_path = os.path.join(folder_path, "global_data.pkl")

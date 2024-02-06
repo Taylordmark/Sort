@@ -13,8 +13,8 @@ import csv
 import math
 import numpy as np
 
-folder_path = r"C:\Users\nloftus\Documents\Datasets\RoboflowDataset\RFFiltered2"
-output_path = r"gt_3.pkl"
+folder_path = r"C:\Users\nloftus\Documents\Datasets\RoboflowDataset\RFFiltered"
+output_path = r"gt_RF1.pkl"
 
 img_size = 512
 
@@ -65,7 +65,7 @@ Our model classes are
 
 #convert gt classes to our model classes
 cls_dict ={
-    0: 0, 
+    0: 2, #0 to biker
     1: 0, #1 to car
     2: 1, #2 to pedestrian 
     3: 6, #3 and 4 to green light
@@ -78,7 +78,7 @@ cls_dict ={
     10: 3 #10 to truck
 }
 
-mot_tracker = sort.Sort(min_hits=1, iou_threshold=.4, max_age=2)
+mot_tracker = sort.Sort(min_hits=0, iou_threshold=.4, max_age=1)
 
 #mot_tracker.update()
 
