@@ -13,8 +13,8 @@ import csv
 import math
 import numpy as np
 
-folder_path = r"C:\Users\nloftus\Documents\Datasets\RoboflowDataset\RFFiltered"
-output_path = r"gt_RF1.pkl"
+folder_path = r"C:\Users\keela\Coding\Driving Dataset\filtered_test_data"
+output_path = r"C:\Users\keela\Coding\Models\FinalResults\gt_RF1.pkl"
 
 img_size = 512
 
@@ -78,7 +78,7 @@ cls_dict ={
     10: 3 #10 to truck
 }
 
-mot_tracker = sort.Sort(min_hits=0, iou_threshold=.4, max_age=1)
+mot_tracker = sort.Sort(min_hits=0, iou_threshold=.2, max_age=3)
 
 #mot_tracker.update()
 
@@ -137,7 +137,6 @@ with open(output_path, 'wb') as pickle_file:
 
 
         frame_num += 1
-    print(results_dict)
 
     pickle.dump(results_dict, pickle_file)
     
