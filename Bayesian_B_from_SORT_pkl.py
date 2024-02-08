@@ -8,6 +8,7 @@ from scipy.stats import beta, ks_2samp
 import random
 import matplotlib.pyplot as plt
 import os
+import math
 
 from Bayesian_A_from_pkl import get_prob_from_dist, global_parameterize, fit_beta
 
@@ -16,6 +17,14 @@ def class_counts_from_global(global_data):
     class_counts = [len(value) for value in global_data.values()]
     return class_counts
 
+def get_class_probabilities(class_dictionary):
+    class_lengths = [len(data) for data in class_dictionary.values()]
+    total_count = sum(class_lengths)
+    class_probabilities = [math.sqrt(data) for data in class_lengths]
+    datasum = sum(class_probabilities)
+    class_probabilities = [round(data / datasum,3) for data in class_probabilities]
+    
+    return class_probabilities
 
 def find_matching_box_index(boxes, bbox):
     # Calculate distances between all SORT boxes and all detection boxes
@@ -36,17 +45,21 @@ def predict_tracker_class(global_data, object_history, class_probabilities):
     # KS test all classes, features and get list of p values
     pvals = []
     for c, m in global_data.items():
-        pval = 1 
+        class_pvals = []
         for i in range(m.shape[1]):
             # Perform the KS test for each column
             ks_statistic, p_value = ks_2samp(m[:, i], object_history[:, i])
     
             # Append the p-value to the pvals list
-            pval *= p_value
-        pvals.append(pval)
+            class_pvals.append(p_value)
+        class_pval = max(class_pvals)
+        pvals.append(class_pval)
     pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
+    pvalsum = sum(pvals)
+    pvals = [round(v / pvalsum,3) for v in pvals]
     
-    predicted_class = pvals.index(max(pvals))
+    predicted_class = np.argmax(pvals)
+    predicted_class -= 1
 
     return predicted_class
 
@@ -59,24 +72,33 @@ def predict_detection_class(distribution_parameters, new_features, class_probabi
         predicted class
        """
         
-    pdfs = []
-    for class_id in distribution_parameters.keys():
-        p = 1
-        for feature_parameters, new_feature in zip(distribution_parameters[class_id], new_features):
-            a, b, loc, scale = feature_parameters
-            probability = beta.pdf(new_feature, a, b, loc=loc, scale=scale)
-            p *= probability
+    # Calculate the pdfs of the new detection using dist parameters
+    pvals = []
+    for class_index, feature_distribution in distribution_parameters.items():
+        p = []
+        for index, (a, b, loc, scale) in enumerate(feature_distribution):
+            probability = beta.pdf(features[index], a, b, loc=loc, scale=scale)
+            # Add a little so none multiplied by 0
+            p.append
+        p = max(p)
+        pvals.append(p)
+    
+    pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
+    pvalsum = sum(pvals)
+    pvals = [round(v / pvalsum,3) for v in pvals]
+    
+    predicted_class = np.argmax(pvals)
+    predicted_class -= 1
 
-        pdfs.append(p)
-    
-    # Multiply by population probabilities
-    pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
-    
-    prediction = np.argmax(pdfs) - 1
-    return prediction
+    return predicted_class
+
+
+
 
 # Define the model folder path
 model_folder = r"C:\Users\keela\Coding\Models\FinalResults\MLE_Sigmoid"
+
+
 # Define the path for the parsed dictionary of objects found in frame
 detections_path = os.path.join(model_folder, "sort_results.pkl")
 
@@ -101,11 +123,24 @@ tracked_object_data = {}
 
 frame_data = {}
 
+frame_count = len(loaded_frames_detections.keys())
+
+prev_chkpt = 0
+
 # Iterate through every detection in the dictionary
 for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()):
+
+    # Calculate percent with more control over formatting
+    percent_unrounded = frame / frame_count
+    percent_str = "{:.0f}".format(percent_unrounded * 100)  # Format to 1 decimal place
+
+    # Print progress
+    if percent_str != prev_chkpt:
+        print(f"Frames: {percent_str}%")
+        prev_chkpt = percent_str
     
     # Get class probabilites
-    class_probabilities = [value / sum(class_counts) for value in class_counts]
+    class_probabilities = get_class_probabilities(global_data)
     
     boxes = []
     cls_probs = []
@@ -127,6 +162,8 @@ for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()
 
             # Add +1 to population counts for proper class
             class_counts[predicted_class+1] += 1
+            
+            global_data[predicted_class] = np.vstack([global_data[predicted_class], features])
         
         # If the object has been seen before
         else:
@@ -135,8 +172,7 @@ for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()
 
 
             # Predict the class of the object based on all data
-            predicted_class = \
-            predict_tracker_class(global_data, \
+            predicted_class = predict_tracker_class(global_data, \
                                      tracked_object_data[track_id]['probabilities'], \
                                          class_probabilities)
             
@@ -150,13 +186,16 @@ for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()
             tracked_object_data[track_id]['boxes'] = np.vstack([tracked_object_data[track_id]['boxes'], box])
             tracked_object_data[track_id]['class'].append(predicted_class)
             tracked_object_data[track_id]['frames'].append(frame_num)
+            
+            global_data[predicted_class] = np.vstack([global_data[predicted_class], features])
+            
         boxes.append(box)
         cls_probs.append(predicted_class)
         track_ids.append(track_id)
         
-        frame_data[frame_num] = {'boxes':boxes,\
-                                 'class':cls_probs,\
-                                  'track_id':track_ids}
+    frame_data[frame_num] = {'boxes':boxes,\
+                                'class':cls_probs,\
+                                'track_id':track_ids}
         
         
 # Save the dictionary to a .pkl file

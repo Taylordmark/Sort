@@ -5,6 +5,7 @@ from scipy.stats import beta
 import pickle
 import os
 import concurrent.futures
+import math
 from fit_beta_cython import fit_beta_cython
 
 
@@ -27,7 +28,13 @@ def get_prob_from_dist(x, parameters):
 def get_class_probabilities(class_dictionary):
     class_lengths = [len(data) for data in class_dictionary.values()]
     total_count = sum(class_lengths)
-    class_probabilities = [data / total_count for data in class_lengths]
+    class_probabilities = [math.sqrt(data) for data in class_lengths]
+    datasum = sum(class_probabilities)
+    class_probabilities = [data / datasum for data in class_probabilities]
+    while class_probabilities[0] > 0.1:
+        class_probabilities[0] = min(0.09, class_probabilities[0])
+        datasum = sum(class_probabilities)
+        class_probabilities = [data / datasum for data in class_probabilities]
     return class_probabilities
 
 def global_parameterize(data_dict):
@@ -79,8 +86,7 @@ def local_parameterize_CPU(history, last_params):
             a, b, loc, scale = last_params[i]
         col_parameters.append([a, b, loc, scale])
     return col_parameters
-            
-   
+             
 
 def local_parameterize_GPU(history):
     col_parameters = []
@@ -144,8 +150,6 @@ def BayesianA(folder_path):
     print("Parameterizing")
     distribution_parameters = global_parameterize(global_data)
     print("Parameterized")
-    
-    class_probabilities = get_class_probabilities(global_data)
 
     prev_chkpt = 0
 
@@ -156,8 +160,7 @@ def BayesianA(folder_path):
     
     # For each frame in the detections dict
     for frame, value in loaded_frames_detections.items():
-        
-        # Recalculate class_probabiities
+
         class_probabilities = get_class_probabilities(global_data)
         
         # Calculate percent with more control over formatting
@@ -189,7 +192,16 @@ def BayesianA(folder_path):
                 pdfs.append(p)
             
             # Multiply by class probabilities
+            pdfsum = sum(pdfs)
+            pdfs = [i / sum(pdfs) for i in pdfs]
+            pdfs = [round(i, 3) for i in pdfs]
+            
             pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
+            
+            pdfs[0] = min(pdfs[0], .1)
+            
+            pdfsum = sum(pdfs)
+            pdfs = [i / sum(pdfs) for i in pdfs]
             
             # Return predicted class adjusted for list / class dict index differences
             prediction = np.argmax(pdfs) - 1
@@ -218,5 +230,5 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Coding\Models\FinalResults\MLE_Sigmoid"
+    folder_path = r"C:\Users\keela\Coding\Models\FinalResults\BCE_Sigmoid"
     BayesianA(folder_path)

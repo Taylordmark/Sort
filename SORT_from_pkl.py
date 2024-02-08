@@ -17,8 +17,8 @@ import csv
 matplotlib.use('Agg')
 
 
-folder_path = r"C:\Users\keela\Coding\Models\FinalResults\MLE\initial_detections.pkl"
-output_path = r"C:\Users\keela\Coding\Models\FinalResults\MLE\sort_results.pkl"
+folder_path = r"C:\Users\keela\Coding\Models\FinalResultsDifferentSort\MLE_Sigmoid\initial_detections.pkl"
+output_path = r"C:\Users\keela\Coding\Models\FinalResultsDifferentSort\MLE_Sigmoid\sort_results.pkl"
 
 # folder_path = r"initial_detections_2L.pkl"
 # output_path = r"sort_results_2L.pkl"
@@ -62,7 +62,7 @@ with open(folder_path, 'rb') as pickle_file:
     loaded_frames_detections = pickle.load(pickle_file)
 
 # Initialize SORT tracker
-mot_tracker = sort.Sort(min_hits=1, iou_threshold=.05, max_age=3)
+mot_tracker = sort.Sort(min_hits=1, iou_threshold=.1, max_age=5)
 
 # Create and open a pickle file for writing tracking results
 with open(output_path, 'wb') as pickle_file:
