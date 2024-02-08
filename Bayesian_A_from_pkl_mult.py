@@ -32,7 +32,7 @@ def get_class_probabilities(class_dictionary):
     datasum = sum(class_probabilities)
     class_probabilities = [data / datasum for data in class_probabilities]
     while class_probabilities[0] > 0.1:
-        class_probabilities[0] = min(0.9, class_probabilities[0])
+        class_probabilities[0] = min(0.09, class_probabilities[0])
         datasum = sum(class_probabilities)
         class_probabilities = [data / datasum for data in class_probabilities]
     return class_probabilities
@@ -146,9 +146,7 @@ def BayesianA(folder_path):
         global_data = pickle.load(pickle_file)
 
     # Calculate global distribution parameters
-    print("Parameterizing")
     distribution_parameters = global_parameterize(global_data)
-    print("Parameterized")
 
     prev_chkpt = 0
 
@@ -184,16 +182,13 @@ def BayesianA(folder_path):
             for class_index in range(len(distribution_parameters.keys())):
                 class_index -= 1
                 feature_distribution = distribution_parameters[class_index]
-                p = []
+                p = 1
                 for index, (a, b, loc, scale) in enumerate(feature_distribution):
                     probability = beta.pdf(features[index], a, b, loc=loc, scale=scale)
                     # Add a little so none multiplied by 0
-                    p.append(probability)
-                max_val = 0
-                for v in p:
-                    if v > max_val:
-                        max_val = v
-                pdfs.append(max_val)
+                    if round(p, 5) > 0:
+                        p *= probability
+                pdfs.append(p)
             
             # Multiply by class probabilities          
             pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
@@ -228,5 +223,20 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Coding\Models\FinalResults\BCE_Softmax"
+    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Sigmoid"
     BayesianA(folder_path)
+    print("1done")
+    
+    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Softmax"
+    BayesianA(folder_path)
+    print("2done")
+    
+    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Softmax"
+    BayesianA(folder_path)
+    print("3done")
+    
+    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Sigmoid"
+    BayesianA(folder_path)
+    
+    
+    

@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import os
 import pickle
-import utils.sort
+from utils import sort
 from pathlib import Path
 import cv2
 import numpy as np
@@ -17,8 +17,8 @@ import csv
 matplotlib.use('Agg')
 
 
-folder_path = r"C:\Users\keela\Coding\Models\FinalResultsDifferentSort\MLE_Sigmoid\initial_detections.pkl"
-output_path = r"C:\Users\keela\Coding\Models\FinalResultsDifferentSort\MLE_Sigmoid\sort_results.pkl"
+folder_path = r"C:\Users\keela\Coding\Models\FinalResults\MLE_Sigmoid\initial_detections.pkl"
+output_path = r"C:\Users\keela\Coding\Models\FinalResults\MLE_Sigmoid\sort_results.pkl"
 
 # folder_path = r"initial_detections_2L.pkl"
 # output_path = r"sort_results_2L.pkl"

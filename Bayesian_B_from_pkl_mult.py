@@ -46,17 +46,15 @@ def predict_tracker_class(global_data, object_history, class_probabilities):
     # KS test all classes, features and get list of p values
     pvals = []
     for c, m in global_data.items():
-        class_pvals = []
+        p = 1
         for i in range(m.shape[1]):
             # Perform the KS test for each column
             ks_statistic, p_value = ks_2samp(m[:, i], object_history[:, i])
     
             # Append the p-value to the pvals list
-            class_pvals.append(p_value)
-        pvalsum = sum(class_pvals)
-        class_pvals = [v / pvalsum for v in class_pvals]
-        class_pval = max(class_pvals)
-        pvals.append(class_pval)
+            if round(p, 5) > 0:
+                p *= p_value
+        pvals.append(p)
     pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
     pvalsum = sum(pvals)
     pvals = [round(v / pvalsum,3) for v in pvals]
@@ -76,28 +74,28 @@ def predict_detection_class(distribution_parameters, new_features, class_probabi
        """
         
     # Calculate the pdfs of the new detection using dist parameters
-    pvals = []
+    pdfs = []
     for class_index in range(len(distribution_parameters.keys())):
         class_index -= 1
         feature_distribution = distribution_parameters[class_index]
-        p = []
+        p = 1
         for index, (a, b, loc, scale) in enumerate(feature_distribution):
             probability = beta.pdf(new_features[index], a, b, loc=loc, scale=scale)
             # Add a little so none multiplied by 0
-            p.append(probability)
-        max_val = 0
-        for v in p:
-            if v > max_val:
-                max_val = v
-        pvals.append(max_val)
-    pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
-    pvalsum = sum(pvals)
-    pvals = [round(v / pvalsum,3) for v in pvals]
+            if round(p, 4) > 0:
+                p *= probability
+        pdfs.append(p)
     
-    predicted_class = np.argmax(pvals)
-    predicted_class -= 1
+    # Multiply by class probabilities          
+    pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
+    pdfsum = sum(pdfs)
+    pdfs = [i / sum(pdfs) for i in pdfs]
 
-    return predicted_class
+    
+    # Return predicted class adjusted for list / class dict index differences
+    prediction = np.argmax(pdfs) - 1
+
+    return prediction
 
 def BayesianB(model_folder):
     
@@ -201,12 +199,18 @@ def BayesianB(model_folder):
             
             
     # Save the dictionary to a .pkl file
-    with open(os.path.join(model_folder, "BayesB_tracked_objectdata.pkl"), 'wb') as file:
-        pickle.dump(tracked_object_data, file)
+    '''with open(os.path.join(model_folder, "BayesB_tracked_objectdata.pkl"), 'wb') as file:
+        pickle.dump(tracked_object_data, file)'''
         
     # Save the dictionary to a .pkl file
     with open(os.path.join(model_folder, "BayesB_for_metrics.pkl"), 'wb') as file:
         pickle.dump(frame_data, file)
 
 if __name__ == "__main__":
-    BayesianB(r"C:\Users\keela\Coding\Models\FinalResults\MLE_Softmax")
+    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Sigmoid")
+    
+    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Softmax")
+    
+    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Sigmoid")
+    
+    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Softmax")
