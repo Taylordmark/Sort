@@ -21,9 +21,10 @@ def get_class_probabilities(class_dictionary):
     class_lengths = [len(data) for data in class_dictionary.values()]
     total_count = sum(class_lengths)
     class_probabilities = [math.sqrt(data) for data in class_lengths]
-    datasum = sum(class_probabilities)
-    class_probabilities = [round(data / datasum,3) for data in class_probabilities]
-    
+    while class_probabilities[0] > 0.1:
+        class_probabilities[0] = min(0.09, class_probabilities[0])
+        datasum = sum(class_probabilities)
+        class_probabilities = [data / datasum for data in class_probabilities]
     return class_probabilities
 
 def find_matching_box_index(boxes, bbox):
@@ -52,6 +53,8 @@ def predict_tracker_class(global_data, object_history, class_probabilities):
     
             # Append the p-value to the pvals list
             class_pvals.append(p_value)
+        pvalsum = sum(class_pvals)
+        class_pvals = [v / pvalsum for v in class_pvals]
         class_pval = max(class_pvals)
         pvals.append(class_pval)
     pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
@@ -96,7 +99,7 @@ def predict_detection_class(distribution_parameters, new_features, class_probabi
 
     return predicted_class
 
-def BayesianA(model_folder):
+def BayesianB(model_folder):
     
     # Define the path for the parsed dictionary of objects found in frame
     detections_path = os.path.join(model_folder, "sort_results.pkl")
@@ -131,7 +134,7 @@ def BayesianA(model_folder):
     
         # Calculate percent with more control over formatting
         percent_unrounded = frame / frame_count
-        percent_str = "{:.0f}".format(percent_unrounded * 100)  # Format to 1 decimal place
+        percent_str = round(percent_unrounded * 100)
     
         # Print progress
         if percent_str != prev_chkpt:
@@ -206,4 +209,4 @@ def BayesianA(model_folder):
         pickle.dump(frame_data, file)
 
 if __name__ == "__main__":
-    BayesianA(r"C:\Users\keela\Coding\Models\FinalResults\MLE_Softmax")
+    BayesianB(r"C:\Users\keela\Coding\Models\FinalResults\MLE_Softmax")

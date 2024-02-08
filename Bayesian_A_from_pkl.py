@@ -228,5 +228,5 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Coding\Models\FinalResults\MLE_Softmax"
+    folder_path = r"C:\Users\keela\Coding\Models\FinalResults\BCE_Sigmoid"
     BayesianA(folder_path)
