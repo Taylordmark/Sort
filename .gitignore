@@ -8,3 +8,4 @@ Include
 share
 *.json
 *.pyc
+*.pkl
