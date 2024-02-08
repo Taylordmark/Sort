@@ -182,25 +182,26 @@ def BayesianA(folder_path):
             # Calculate the pdfs of the new detection using dist parameters
             pdfs = []
             for class_index, feature_distribution in distribution_parameters.items():
-                p = 1
+                p = []
                 for index, (a, b, loc, scale) in enumerate(feature_distribution):
                     probability = beta.pdf(features[index], a, b, loc=loc, scale=scale)
                     # Add a little so none multiplied by 0
-                    probability += 0.001
-                    p *= probability
-                pdfs.append(p)
+                    p.append(probability)
+                max_val = 0
+                for v in p:
+                    if v > max_val:
+                        max_val = v
+                pdfs.append(max_val)
             
             # Multiply by class probabilities
-            pdfsum = sum(pdfs)
-            pdfs = [i / sum(pdfs) for i in pdfs]
-            pdfs = [round(i, 3) for i in pdfs]
-            
+            pdfs = [i / sum(pdfs) for i in pdfs]            
             pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
-            
-            pdfs[0] = min(pdfs[0], .1)
-            
             pdfsum = sum(pdfs)
             pdfs = [i / sum(pdfs) for i in pdfs]
+
+            # pdfs[0] = min(pdfs[0], .1)
+            # pdfsum = sum(pdfs)
+            # pdfs = [i / sum(pdfs) for i in pdfs]
             
             # Return predicted class adjusted for list / class dict index differences
             prediction = np.argmax(pdfs) - 1
@@ -229,5 +230,5 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Coding\Models\FinalResults\BCE_Sigmoid"
+    folder_path = r"C:\Users\keela\Coding\Models\FinalResults\MLE_Softmax"
     BayesianA(folder_path)
