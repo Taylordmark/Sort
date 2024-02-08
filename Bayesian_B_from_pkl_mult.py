@@ -207,10 +207,10 @@ def BayesianB(model_folder):
         pickle.dump(frame_data, file)
 
 if __name__ == "__main__":
-    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Sigmoid")
+    BayesianB(r"C:\Users\keela\Coding\Models\MultResults\MLE_Sigmoid")
     
-    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Softmax")
+    BayesianB(r"C:\Users\keela\Coding\Models\MultResults\MLE_Softmax")
     
-    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Sigmoid")
+    BayesianB(r"C:\Users\keela\Coding\Models\MultResults\BCE_Sigmoid")
     
-    BayesianB(r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Softmax")
+    BayesianB(r"C:\Users\keela\Coding\Models\MultResults\BCE_Softmax")

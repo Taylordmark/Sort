@@ -31,8 +31,8 @@ def get_class_probabilities(class_dictionary):
     class_probabilities = [math.sqrt(data) for data in class_lengths]
     datasum = sum(class_probabilities)
     class_probabilities = [data / datasum for data in class_probabilities]
-    while class_probabilities[0] > 0.1:
-        class_probabilities[0] = min(0.09, class_probabilities[0])
+    while class_probabilities[0] > 0.05:
+        class_probabilities[0] = min(0.04, class_probabilities[0])
         datasum = sum(class_probabilities)
         class_probabilities = [data / datasum for data in class_probabilities]
     return class_probabilities
@@ -223,19 +223,19 @@ def BayesianA(folder_path):
         pickle.dump(all_predictions, file)
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Sigmoid"
+    folder_path = r"C:\Users\keela\Coding\Models\MULTResults\BCE_Sigmoid"
     BayesianA(folder_path)
     print("1done")
     
-    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\BCE_Softmax"
+    folder_path = r"C:\Users\keela\Coding\Models\MULTResults\BCE_Softmax"
     BayesianA(folder_path)
     print("2done")
     
-    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Softmax"
+    folder_path = r"C:\Users\keela\Coding\Models\MULTResults\MLE_Softmax"
     BayesianA(folder_path)
     print("3done")
     
-    folder_path = r"C:\Users\keela\Coding\Models\amireallydoingthisagain\MLE_Sigmoid"
+    folder_path = r"C:\Users\keela\Coding\Models\MULTResults\MLE_Sigmoid"
     BayesianA(folder_path)
     
     
