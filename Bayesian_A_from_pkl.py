@@ -6,7 +6,7 @@ import pickle
 import os
 import concurrent.futures
 import math
-from fit_beta_cython import fit_beta_cython
+from utils.fit_beta_cython import fit_beta_cython
 
 
 def get_prob_from_dist(x, parameters):
@@ -87,7 +87,6 @@ def local_parameterize_CPU(history, last_params):
         col_parameters.append([a, b, loc, scale])
     return col_parameters
              
-
 def local_parameterize_GPU(history):
     col_parameters = []
 
