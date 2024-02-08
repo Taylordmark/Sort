@@ -181,7 +181,7 @@ def BayesianA(folder_path):
 
             # Calculate the pdfs of the new detection using dist parameters
             pdfs = []
-            for class_index, in range(len(distribution_parameters.keys())):
+            for class_index in range(len(distribution_parameters.keys())):
                 class_index -= 1
                 feature_distribution = distribution_parameters[class_index]
                 p = []
@@ -195,15 +195,11 @@ def BayesianA(folder_path):
                         max_val = v
                 pdfs.append(max_val)
             
-            # Multiply by class probabilities
-            pdfs = [i / sum(pdfs) for i in pdfs]            
+            # Multiply by class probabilities          
             pdfs = [pdfs[i] * class_probabilities[i] for i in range(len(pdfs))]
             pdfsum = sum(pdfs)
             pdfs = [i / sum(pdfs) for i in pdfs]
 
-            # pdfs[0] = min(pdfs[0], .1)
-            # pdfsum = sum(pdfs)
-            # pdfs = [i / sum(pdfs) for i in pdfs]
             
             # Return predicted class adjusted for list / class dict index differences
             prediction = np.argmax(pdfs) - 1

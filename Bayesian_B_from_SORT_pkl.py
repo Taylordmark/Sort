@@ -3,7 +3,7 @@ import numpy as np
 import random
 from scipy.stats import beta
 import pickle
-from sort import Sort
+from utils.sort import Sort
 from scipy.stats import beta, ks_2samp
 import random
 import matplotlib.pyplot as plt
@@ -74,15 +74,19 @@ def predict_detection_class(distribution_parameters, new_features, class_probabi
         
     # Calculate the pdfs of the new detection using dist parameters
     pvals = []
-    for class_index, feature_distribution in distribution_parameters.items():
+    for class_index in range(len(distribution_parameters.keys())):
+        class_index -= 1
+        feature_distribution = distribution_parameters[class_index]
         p = []
         for index, (a, b, loc, scale) in enumerate(feature_distribution):
-            probability = beta.pdf(features[index], a, b, loc=loc, scale=scale)
+            probability = beta.pdf(new_features[index], a, b, loc=loc, scale=scale)
             # Add a little so none multiplied by 0
-            p.append
-        p = max(p)
-        pvals.append(p)
-    
+            p.append(probability)
+        max_val = 0
+        for v in p:
+            if v > max_val:
+                max_val = v
+        pvals.append(max_val)
     pvals = [pvals[i] * class_probabilities[i] for i in range(len(pvals))]
     pvalsum = sum(pvals)
     pvals = [round(v / pvalsum,3) for v in pvals]
@@ -92,116 +96,114 @@ def predict_detection_class(distribution_parameters, new_features, class_probabi
 
     return predicted_class
 
-
-
-
-# Define the model folder path
-model_folder = r"C:\Users\keela\Coding\Models\FinalResults\MLE_Sigmoid"
-
-
-# Define the path for the parsed dictionary of objects found in frame
-detections_path = os.path.join(model_folder, "sort_results.pkl")
-
-global_path = os.path.join(model_folder, "global_data.pkl")
-
-# Load data from a pickle file
-with open(detections_path, 'rb') as pickle_file:
-    loaded_frames_detections = pickle.load(pickle_file)
-
-# Load data from a pickle file
-with open(global_path, 'rb') as pickle_file:
-    global_data = pickle.load(pickle_file)
-
-# Get class probabilities from population counts
-class_counts = class_counts_from_global(global_data)
-
-# Get distribution parameters from global data
-distribution_parameters = global_parameterize(global_data)
-
-# Initialize dict of data for each tracked object
-tracked_object_data = {}
-
-frame_data = {}
-
-frame_count = len(loaded_frames_detections.keys())
-
-prev_chkpt = 0
-
-# Iterate through every detection in the dictionary
-for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()):
-
-    # Calculate percent with more control over formatting
-    percent_unrounded = frame / frame_count
-    percent_str = "{:.0f}".format(percent_unrounded * 100)  # Format to 1 decimal place
-
-    # Print progress
-    if percent_str != prev_chkpt:
-        print(f"Frames: {percent_str}%")
-        prev_chkpt = percent_str
+def BayesianA(model_folder):
     
-    # Get class probabilites
-    class_probabilities = get_class_probabilities(global_data)
+    # Define the path for the parsed dictionary of objects found in frame
+    detections_path = os.path.join(model_folder, "sort_results.pkl")
     
-    boxes = []
-    cls_probs = []
-    track_ids = []
+    global_path = os.path.join(model_folder, "global_data.pkl")
     
-    for idx in range(len(detections['cls_prob'])):
-        box = detections['boxes'][idx,:]
-        track_id = detections['track_id'][idx]
-        features = detections['cls_prob'][idx]
-        
-        # If the object is new
-        if track_id not in tracked_object_data.keys():
-            predicted_class = predict_detection_class(distribution_parameters, features, class_probabilities)
-            # Add class prediction to dictionary
-            tracked_object_data[track_id] = {"boxes":[box],\
-                                             "class":[predicted_class],\
-                                             'probabilities':features,\
-                                             'frames': [frame_num]}
-
-            # Add +1 to population counts for proper class
-            class_counts[predicted_class+1] += 1
-            
-            global_data[predicted_class] = np.vstack([global_data[predicted_class], features])
-        
-        # If the object has been seen before
-        else:
-            # Append probability data to the array
-            tracked_object_data[track_id]['probabilities'] = np.vstack([tracked_object_data[track_id]['probabilities'], features])
-
-
-            # Predict the class of the object based on all data
-            predicted_class = predict_tracker_class(global_data, \
-                                     tracked_object_data[track_id]['probabilities'], \
-                                         class_probabilities)
-            
-            # Check if predicted class matches the prediction from previous frames in dict
-            previous_class = tracked_object_data[track_id]['class'][-1]
-            
-
-            class_counts[predicted_class] += 1  # Add to new class
-
-            # Update tracked object class dictionary
-            tracked_object_data[track_id]['boxes'] = np.vstack([tracked_object_data[track_id]['boxes'], box])
-            tracked_object_data[track_id]['class'].append(predicted_class)
-            tracked_object_data[track_id]['frames'].append(frame_num)
-            
-            global_data[predicted_class] = np.vstack([global_data[predicted_class], features])
-            
-        boxes.append(box)
-        cls_probs.append(predicted_class)
-        track_ids.append(track_id)
-        
-    frame_data[frame_num] = {'boxes':boxes,\
-                                'class':cls_probs,\
-                                'track_id':track_ids}
-        
-        
-# Save the dictionary to a .pkl file
-with open(os.path.join(model_folder, "BayesB_tracked_objectdata.pkl"), 'wb') as file:
-    pickle.dump(tracked_object_data, file)
+    # Load data from a pickle file
+    with open(detections_path, 'rb') as pickle_file:
+        loaded_frames_detections = pickle.load(pickle_file)
     
-# Save the dictionary to a .pkl file
-with open(os.path.join(model_folder, "BayesB_for_metrics.pkl"), 'wb') as file:
-    pickle.dump(frame_data, file)
+    # Load data from a pickle file
+    with open(global_path, 'rb') as pickle_file:
+        global_data = pickle.load(pickle_file)
+    
+    # Get class probabilities from population counts
+    class_counts = class_counts_from_global(global_data)
+    
+    # Get distribution parameters from global data
+    distribution_parameters = global_parameterize(global_data)
+    
+    # Initialize dict of data for each tracked object
+    tracked_object_data = {}
+    
+    frame_data = {}
+    
+    frame_count = len(loaded_frames_detections.keys())
+    
+    prev_chkpt = 0
+    
+    # Iterate through every detection in the dictionary
+    for frame_num, (frame, detections) in enumerate(loaded_frames_detections.items()):
+    
+        # Calculate percent with more control over formatting
+        percent_unrounded = frame / frame_count
+        percent_str = "{:.0f}".format(percent_unrounded * 100)  # Format to 1 decimal place
+    
+        # Print progress
+        if percent_str != prev_chkpt:
+            print(f"Frames: {percent_str}%")
+            prev_chkpt = percent_str
+        
+        # Get class probabilites
+        class_probabilities = get_class_probabilities(global_data)
+        
+        boxes = []
+        cls_probs = []
+        track_ids = []
+        
+        for idx in range(len(detections['cls_prob'])):
+            box = detections['boxes'][idx,:]
+            track_id = detections['track_id'][idx]
+            features = detections['cls_prob'][idx]
+            
+            # If the object is new
+            if track_id not in tracked_object_data.keys():
+                predicted_class = predict_detection_class(distribution_parameters, features, class_probabilities)
+                # Add class prediction to dictionary
+                tracked_object_data[track_id] = {"boxes":[box],\
+                                                 "class":[predicted_class],\
+                                                 'probabilities':features,\
+                                                 'frames': [frame_num]}
+    
+                # Add +1 to population counts for proper class
+                class_counts[predicted_class+1] += 1
+                
+                global_data[predicted_class] = np.vstack([global_data[predicted_class], features])
+            
+            # If the object has been seen before
+            else:
+                # Append probability data to the array
+                tracked_object_data[track_id]['probabilities'] = np.vstack([tracked_object_data[track_id]['probabilities'], features])
+    
+    
+                # Predict the class of the object based on all data
+                predicted_class = predict_tracker_class(global_data, \
+                                         tracked_object_data[track_id]['probabilities'], \
+                                             class_probabilities)
+                
+                # Check if predicted class matches the prediction from previous frames in dict
+                previous_class = tracked_object_data[track_id]['class'][-1]
+                
+    
+                class_counts[predicted_class] += 1  # Add to new class
+    
+                # Update tracked object class dictionary
+                tracked_object_data[track_id]['boxes'] = np.vstack([tracked_object_data[track_id]['boxes'], box])
+                tracked_object_data[track_id]['class'].append(predicted_class)
+                tracked_object_data[track_id]['frames'].append(frame_num)
+                
+                global_data[predicted_class] = np.vstack([global_data[predicted_class], features])
+                
+            boxes.append(box)
+            cls_probs.append(predicted_class)
+            track_ids.append(track_id)
+            
+        frame_data[frame_num] = {'boxes':boxes,\
+                                    'class':cls_probs,\
+                                    'track_id':track_ids}
+            
+            
+    # Save the dictionary to a .pkl file
+    with open(os.path.join(model_folder, "BayesB_tracked_objectdata.pkl"), 'wb') as file:
+        pickle.dump(tracked_object_data, file)
+        
+    # Save the dictionary to a .pkl file
+    with open(os.path.join(model_folder, "BayesB_for_metrics.pkl"), 'wb') as file:
+        pickle.dump(frame_data, file)
+
+if __name__ == "__main__":
+    BayesianA(r"C:\Users\keela\Coding\Models\FinalResults\MLE_Softmax")
