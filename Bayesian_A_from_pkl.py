@@ -181,7 +181,9 @@ def BayesianA(folder_path):
 
             # Calculate the pdfs of the new detection using dist parameters
             pdfs = []
-            for class_index, feature_distribution in distribution_parameters.items():
+            for class_index, in range(len(distribution_parameters.keys())):
+                class_index -= 1
+                feature_distribution = distribution_parameters[class_index]
                 p = []
                 for index, (a, b, loc, scale) in enumerate(feature_distribution):
                     probability = beta.pdf(features[index], a, b, loc=loc, scale=scale)
