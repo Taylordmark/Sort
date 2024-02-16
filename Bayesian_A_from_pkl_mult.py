@@ -31,6 +31,8 @@ def get_class_probabilities(class_dictionary):
     class_probabilities = [math.sqrt(data) for data in class_lengths]
     datasum = sum(class_probabilities)
     class_probabilities = [data / datasum for data in class_probabilities]
+    # IF you need less unknowns, make it smaller
+    # If you need more, make it bigger
     while class_probabilities[0] > 0.05:
         class_probabilities[0] = min(0.04, class_probabilities[0])
         datasum = sum(class_probabilities)
